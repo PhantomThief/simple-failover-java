@@ -1,4 +1,4 @@
-simple-failover-java
+simple-failover-java [![Build Status](https://travis-ci.org/PhantomThief/simple-failover-java.svg)](https://travis-ci.org/PhantomThief/simple-failover-java)
 =======================
 
 A simple failover library for Java
@@ -13,4 +13,18 @@ A simple failover library for Java
     <artifactId>simple-failover</artifactId>
     <version>0.1.0</version>
 </dependency>
+```
+
+```Java	
+List<T> orig = ... // original list
+
+Failover<T> failover = RecoverableCheckFailover.<T> newBuilder() //
+        .setFailCount(10) //
+        .setFailDuration(1, TimeUnit.MINUTES) //
+        .setChecker(this::test) //
+        .build(orig);
+List<T> available = failover.getAvailable();
+
+// when it fails, mark it.
+failover.fail(obj);
 ```

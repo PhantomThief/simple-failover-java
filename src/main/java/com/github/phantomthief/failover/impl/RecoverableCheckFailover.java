@@ -28,7 +28,7 @@ import com.google.common.util.concurrent.MoreExecutors;
  * 
  * @author w.vela
  */
-public class RecoveryCheckFailoverStrategyImpl<T> implements Failover<T>, Closeable {
+public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
     private final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
 
@@ -43,7 +43,7 @@ public class RecoveryCheckFailoverStrategyImpl<T> implements Failover<T>, Closea
     private final boolean returnOriginalWhileAllFailed;
     private final ScheduledExecutorService scheduledExecutorService;
 
-    private RecoveryCheckFailoverStrategyImpl(List<T> original, Predicate<T> checker, int failCount,
+    private RecoverableCheckFailover(List<T> original, Predicate<T> checker, int failCount,
             long failDuration, long recoveryCheckDuration, boolean returnOriginalWhileAllFailed,
             ScheduledExecutorService scheduledExecutorService) {
         this.returnOriginalWhileAllFailed = returnOriginalWhileAllFailed;
@@ -144,7 +144,7 @@ public class RecoveryCheckFailoverStrategyImpl<T> implements Failover<T>, Closea
 
     @Override
     public String toString() {
-        return "RecoveryCheckFailoverStrategyImpl [logger=" + logger + ", original=" + original
+        return "RecoverableCheckFailover [logger=" + logger + ", original=" + original
                 + ", failDuration=" + failDuration + ", failedList=" + failedList
                 + ", failCountMap=" + failCountMap + ", returnOriginalWhileAllFailed="
                 + returnOriginalWhileAllFailed + ", scheduledExecutorService="
@@ -197,11 +197,10 @@ public class RecoveryCheckFailoverStrategyImpl<T> implements Failover<T>, Closea
             return this;
         }
 
-        public RecoveryCheckFailoverStrategyImpl<T> build() {
+        public RecoverableCheckFailover<T> build() {
             ensure();
-            return new RecoveryCheckFailoverStrategyImpl<>(original, checker, failCount,
-                    failDuration, recoveryCheckDuration, returnOriginalWhileAllFailed,
-                    scheduledExecutorService);
+            return new RecoverableCheckFailover<>(original, checker, failCount, failDuration,
+                    recoveryCheckDuration, returnOriginalWhileAllFailed, scheduledExecutorService);
         }
 
         private void ensure() {
@@ -228,7 +227,10 @@ public class RecoveryCheckFailoverStrategyImpl<T> implements Failover<T>, Closea
                 });
             }
         }
+    }
 
+    public static final <T> Builder<T> newBuilder() {
+        return new Builder<>();
     }
 
 }

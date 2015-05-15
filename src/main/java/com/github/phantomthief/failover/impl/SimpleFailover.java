@@ -23,7 +23,7 @@ import com.google.common.collect.EvictingQueue;
  * 
  * @author w.vela
  */
-public class SimpleFailoverStrategyImpl<T> implements Failover<T> {
+public class SimpleFailover<T> implements Failover<T> {
 
     private final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
 
@@ -42,7 +42,7 @@ public class SimpleFailoverStrategyImpl<T> implements Failover<T> {
      * @param failedList
      * @param failCountMap
      */
-    private SimpleFailoverStrategyImpl(List<T> original, int failCount, long failDuration,
+    private SimpleFailover(List<T> original, int failCount, long failDuration,
             long recoveryDuration) {
         this.original = original;
         this.failDuration = failDuration;
@@ -139,9 +139,9 @@ public class SimpleFailoverStrategyImpl<T> implements Failover<T> {
             return this;
         }
 
-        public SimpleFailoverStrategyImpl<T> build() {
+        public SimpleFailover<T> build() {
             ensure();
-            return new SimpleFailoverStrategyImpl<>(original, failCount, failDuration,
+            return new SimpleFailover<>(original, failCount, failDuration,
                     recoveryDuration);
         }
 

@@ -114,15 +114,9 @@ public class SimpleFailover<T> implements Failover<T> {
 
     public static final class Builder<T> {
 
-        private List<T> original;
         private long failDuration;
         private long recoveryDuration;
         private int failCount;
-
-        public Builder<T> setOriginal(List<T> original) {
-            this.original = original;
-            return this;
-        }
 
         public Builder<T> setFailDuration(long failDuration, TimeUnit unit) {
             this.failDuration = unit.toMillis(failDuration);
@@ -139,16 +133,12 @@ public class SimpleFailover<T> implements Failover<T> {
             return this;
         }
 
-        public SimpleFailover<T> build() {
+        public SimpleFailover<T> build(List<T> original) {
             ensure();
-            return new SimpleFailover<>(original, failCount, failDuration,
-                    recoveryDuration);
+            return new SimpleFailover<>(original, failCount, failDuration, recoveryDuration);
         }
 
         private void ensure() {
-            if (original == null || original.isEmpty()) {
-                throw new IllegalArgumentException("original list is empty.");
-            }
             if (failCount <= 0) {
                 failCount = DEFAULT_FAIL_COUNT;
             }

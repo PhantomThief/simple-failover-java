@@ -153,7 +153,6 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
     public static final class Builder<T> {
 
-        private List<T> original;
         private int failCount;
         private long failDuration;
         private long recoveryCheckDuration;
@@ -176,11 +175,6 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             return this;
         }
 
-        public Builder<T> setOriginal(List<T> original) {
-            this.original = original;
-            return this;
-        }
-
         public Builder<T> setFailDuration(long failDuration, TimeUnit unit) {
             this.failDuration = unit.toMillis(failDuration);
             return this;
@@ -197,16 +191,13 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             return this;
         }
 
-        public RecoverableCheckFailover<T> build() {
+        public RecoverableCheckFailover<T> build(List<T> original) {
             ensure();
             return new RecoverableCheckFailover<>(original, checker, failCount, failDuration,
                     recoveryCheckDuration, returnOriginalWhileAllFailed, scheduledExecutorService);
         }
 
         private void ensure() {
-            if (original == null || original.isEmpty()) {
-                throw new IllegalArgumentException("original list is empty.");
-            }
             if (checker == null) {
                 throw new NullPointerException("no checker found.");
             }

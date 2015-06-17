@@ -40,8 +40,8 @@ public class SimplePortChecker {
     }
 
     public boolean test(String host, int port) {
-        SocketAddress sockaddr = new InetSocketAddress(host, port);
         try (Socket socket = new Socket()) {
+            SocketAddress sockaddr = new InetSocketAddress(host, port);
             socket.connect(sockaddr, connectTimeout);
             logger.info("[{}:{}] is reachable.", host, port);
             return true;

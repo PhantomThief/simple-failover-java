@@ -21,8 +21,11 @@ import com.google.common.collect.EvictingQueue;
  * failover条件是一段时间内出错次数超过一个阈值
  * failback策略是直接一段时间后就认为恢复
  * 
+ * 由于实际没啥卵用，所以废弃掉
+ * 
  * @author w.vela
  */
+@Deprecated
 public class SimpleFailover<T> implements Failover<T> {
 
     private final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());

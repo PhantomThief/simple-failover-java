@@ -19,6 +19,7 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.EvictingQueue;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * 一个简易的failover/failback策略类
@@ -206,11 +207,11 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                 recoveryCheckDuration = DEFAULT_RECOVERY_CHECK_DURATION;
             }
             if (scheduledExecutorService == null) {
-                scheduledExecutorService = Executors.newScheduledThreadPool(1, r -> {
-                    Thread thread = new Thread(r);
-                    thread.setName("failover-check-thread-id-" + thread.getId());
-                    return thread;
-                });
+                scheduledExecutorService = Executors.newScheduledThreadPool(1,
+                        new ThreadFactoryBuilder() //
+                                .setNameFormat("failover-check-thread-id-%d") //
+                                .setPriority(Thread.MIN_PRIORITY) //
+                                .build());
             }
         }
     }

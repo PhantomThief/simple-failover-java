@@ -5,7 +5,6 @@ package com.github.phantomthief.failover.impl;
 
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -72,17 +71,13 @@ public class SimpleFailover<T> implements Failover<T> {
         }
         logger.trace("server {} failed.", object);
         boolean addToFail = false;
-        try {
-            EvictingQueue<Long> evictingQueue = failCountMap.get(object);
-            synchronized (evictingQueue) {
-                evictingQueue.add(System.currentTimeMillis());
-                if (evictingQueue.remainingCapacity() == 0
-                        && evictingQueue.element() >= System.currentTimeMillis() - failDuration) {
-                    addToFail = true;
-                }
+        EvictingQueue<Long> evictingQueue = failCountMap.getUnchecked(object);
+        synchronized (evictingQueue) {
+            evictingQueue.add(System.currentTimeMillis());
+            if (evictingQueue.remainingCapacity() == 0
+                    && evictingQueue.element() >= System.currentTimeMillis() - failDuration) {
+                addToFail = true;
             }
-        } catch (ExecutionException e) {
-            logger.error("Ops.", e);
         }
         if (addToFail) {
             failedList.put(object, Boolean.TRUE);

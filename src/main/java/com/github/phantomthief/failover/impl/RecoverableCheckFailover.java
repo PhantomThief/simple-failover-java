@@ -7,7 +7,6 @@ import java.io.Closeable;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -85,17 +84,13 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         }
         logger.warn("server {} failed.", object);
         boolean addToFail = false;
-        try {
-            EvictingQueue<Long> evictingQueue = failCountMap.get(object);
-            synchronized (evictingQueue) {
-                evictingQueue.add(System.currentTimeMillis());
-                if (evictingQueue.remainingCapacity() == 0
-                        && evictingQueue.element() >= System.currentTimeMillis() - failDuration) {
-                    addToFail = true;
-                }
+        EvictingQueue<Long> evictingQueue = failCountMap.getUnchecked(object);
+        synchronized (evictingQueue) {
+            evictingQueue.add(System.currentTimeMillis());
+            if (evictingQueue.remainingCapacity() == 0
+                    && evictingQueue.element() >= System.currentTimeMillis() - failDuration) {
+                addToFail = true;
             }
-        } catch (ExecutionException e) {
-            logger.error("Ops.", e);
         }
         if (addToFail) {
             failedList.add(object);
@@ -185,8 +180,8 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             return this;
         }
 
-        public Builder<T> setScheduledExecutorService(
-                ScheduledExecutorService scheduledExecutorService) {
+        public Builder<T>
+                setScheduledExecutorService(ScheduledExecutorService scheduledExecutorService) {
             this.scheduledExecutorService = scheduledExecutorService;
             return this;
         }

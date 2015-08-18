@@ -3,10 +3,11 @@
  */
 package com.github.phantomthief.failover.impl;
 
+import static java.util.stream.Collectors.toList;
+
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import com.github.phantomthief.failover.Failover;
 import com.google.common.cache.Cache;
@@ -90,8 +91,7 @@ public class SimpleFailover<T> implements Failover<T> {
      */
     @Override
     public List<T> getAvailable() {
-        return original.stream().filter(obj -> !getFailed().contains(obj))
-                .collect(Collectors.toList());
+        return original.stream().filter(obj -> !getFailed().contains(obj)).collect(toList());
     }
 
     /* (non-Javadoc)

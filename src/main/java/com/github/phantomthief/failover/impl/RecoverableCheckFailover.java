@@ -3,6 +3,8 @@
  */
 package com.github.phantomthief.failover.impl;
 
+import static java.util.stream.Collectors.toList;
+
 import java.io.Closeable;
 import java.util.List;
 import java.util.Set;
@@ -11,7 +13,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 import com.github.phantomthief.failover.Failover;
 import com.google.common.cache.CacheBuilder;
@@ -66,7 +67,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                 // 考虑到COWArraySet不支持iterator.remove，所以这里使用搜集->统一清理的策略
                 List<T> covered = failedList.stream().filter(checker::test).peek(obj -> {
                     logger.info("obj:{} is recoveried during test.", obj);
-                }).collect(Collectors.toList());
+                }).collect(toList());
                 failedList.removeAll(covered);
             } catch (Throwable e) {
                 logger.error("Ops.", e);
@@ -105,7 +106,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
     @Override
     public List<T> getAvailable() {
         List<T> availables = original.stream().filter(obj -> !getFailed().contains(obj))
-                .collect(Collectors.toList());
+                .collect(toList());
         if ((availables == null || availables.isEmpty()) && returnOriginalWhileAllFailed) {
             return original;
         } else {

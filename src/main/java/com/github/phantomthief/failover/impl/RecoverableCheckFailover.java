@@ -32,7 +32,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
     private final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
-
     private static final int DEFAULT_FAIL_COUNT = 10;
     private static final long DEFAULT_FAIL_DURATION = TimeUnit.MINUTES.toMillis(1);
     private static final long DEFAULT_RECOVERY_CHECK_DURATION = TimeUnit.SECONDS.toMillis(5);
@@ -66,7 +65,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             try {
                 // 考虑到COWArraySet不支持iterator.remove，所以这里使用搜集->统一清理的策略
                 List<T> covered = failedList.stream().filter(checker::test).peek(obj -> {
-                    logger.info("obj:{} is recoveried during test.", obj);
+                    logger.info("obj:{} is recovered during test.", obj);
                 }).collect(toList());
                 failedList.removeAll(covered);
             } catch (Throwable e) {

@@ -129,12 +129,11 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         return original;
     }
 
-    public void close() {
-        synchronized (this) {
-            if (scheduledExecutorService != null && !scheduledExecutorService.isShutdown()) {
-                MoreExecutors.shutdownAndAwaitTermination(scheduledExecutorService, 1,
-                        TimeUnit.MINUTES);
-            }
+    public synchronized void close() {
+        if (scheduledExecutorService != null && !scheduledExecutorService.isShutdown()) {
+            if (!MoreExecutors.shutdownAndAwaitTermination(scheduledExecutorService, 1,
+                    TimeUnit.MINUTES))
+                logger.warn("fail to close failover:{}", this);
         }
     }
 

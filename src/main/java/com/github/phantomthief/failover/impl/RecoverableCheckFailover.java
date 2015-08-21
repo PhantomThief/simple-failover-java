@@ -210,6 +210,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                         new ThreadFactoryBuilder() //
                                 .setNameFormat("failover-check-thread-id-%d") //
                                 .setPriority(Thread.MIN_PRIORITY) //
+                                .setDaemon(true) //
                                 .build());
             }
         }

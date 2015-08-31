@@ -15,6 +15,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import com.github.phantomthief.failover.Failover;
+import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -193,9 +194,8 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         }
 
         private void ensure() {
-            if (checker == null) {
-                throw new NullPointerException("no checker found.");
-            }
+            Preconditions.checkNotNull(checker);
+
             if (failCount <= 0) {
                 failCount = DEFAULT_FAIL_COUNT;
             }

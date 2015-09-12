@@ -9,19 +9,17 @@ import java.io.Closeable;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import com.github.phantomthief.failover.Failover;
+import com.github.phantomthief.failover.util.SharedRecoveryCheckScheduledExecutorHolder;
 import com.google.common.base.Preconditions;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.EvictingQueue;
-import com.google.common.util.concurrent.MoreExecutors;
-import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * 一个简易的failover/failback策略类
@@ -42,11 +40,10 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
     private final Set<T> failedList = new CopyOnWriteArraySet<>();
     private final LoadingCache<T, EvictingQueue<Long>> failCountMap;
     private final boolean returnOriginalWhileAllFailed;
-    private final ScheduledExecutorService scheduledExecutorService;
+    private final ScheduledFuture<?> recoveryFuture;
 
     private RecoverableCheckFailover(List<T> original, Predicate<T> checker, int failCount,
-            long failDuration, long recoveryCheckDuration, boolean returnOriginalWhileAllFailed,
-            ScheduledExecutorService scheduledExecutorService) {
+            long failDuration, long recoveryCheckDuration, boolean returnOriginalWhileAllFailed) {
         this.returnOriginalWhileAllFailed = returnOriginalWhileAllFailed;
         this.original = original;
         this.failDuration = failDuration;
@@ -58,21 +55,21 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                         return EvictingQueue.create(failCount);
                     }
                 });
-        this.scheduledExecutorService = scheduledExecutorService;
-        this.scheduledExecutorService.scheduleWithFixedDelay(() -> {
-            if (failedList == null || failedList.isEmpty()) {
-                return;
-            }
-            try {
-                // 考虑到COWArraySet不支持iterator.remove，所以这里使用搜集->统一清理的策略
-                List<T> covered = failedList.stream().filter(checker::test).peek(obj -> {
-                    logger.info("obj:{} is recovered during test.", obj);
-                }).collect(toList());
-                failedList.removeAll(covered);
-            } catch (Throwable e) {
-                logger.error("Ops.", e);
-            }
-        } , recoveryCheckDuration, recoveryCheckDuration, TimeUnit.MILLISECONDS);
+        recoveryFuture = SharedRecoveryCheckScheduledExecutorHolder.getInstance()
+                .scheduleWithFixedDelay(() -> {
+                    if (failedList == null || failedList.isEmpty()) {
+                        return;
+                    }
+                    try {
+                        // 考虑到COWArraySet不支持iterator.remove，所以这里使用搜集->统一清理的策略
+                        List<T> covered = failedList.stream().filter(checker::test).peek(obj -> {
+                            logger.info("obj:{} is recovered during test.", obj);
+                        }).collect(toList());
+                        failedList.removeAll(covered);
+                    } catch (Throwable e) {
+                        logger.error("Ops.", e);
+                    }
+                } , recoveryCheckDuration, recoveryCheckDuration, TimeUnit.MILLISECONDS);
     }
 
     /* (non-Javadoc)
@@ -131,10 +128,10 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
     }
 
     public synchronized void close() {
-        if (scheduledExecutorService != null && !scheduledExecutorService.isShutdown()) {
-            if (!MoreExecutors.shutdownAndAwaitTermination(scheduledExecutorService, 1,
-                    TimeUnit.MINUTES))
+        if (!recoveryFuture.isCancelled()) {
+            if (!recoveryFuture.cancel(true)) {
                 logger.warn("fail to close failover:{}", this);
+            }
         }
     }
 
@@ -143,8 +140,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         return "RecoverableCheckFailover [logger=" + logger + ", original=" + original
                 + ", failDuration=" + failDuration + ", failedList=" + failedList
                 + ", failCountMap=" + failCountMap + ", returnOriginalWhileAllFailed="
-                + returnOriginalWhileAllFailed + ", scheduledExecutorService="
-                + scheduledExecutorService + "]";
+                + returnOriginalWhileAllFailed + "]";
     }
 
     public static final class Builder<T> {
@@ -154,7 +150,6 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         private long recoveryCheckDuration;
         private boolean returnOriginalWhileAllFailed;
         private Predicate<T> checker;
-        private ScheduledExecutorService scheduledExecutorService;
 
         public Builder<T> setFailCount(int failCount) {
             this.failCount = failCount;
@@ -181,16 +176,10 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             return this;
         }
 
-        public Builder<T>
-                setScheduledExecutorService(ScheduledExecutorService scheduledExecutorService) {
-            this.scheduledExecutorService = scheduledExecutorService;
-            return this;
-        }
-
         public RecoverableCheckFailover<T> build(List<T> original) {
             ensure();
             return new RecoverableCheckFailover<>(original, checker, failCount, failDuration,
-                    recoveryCheckDuration, returnOriginalWhileAllFailed, scheduledExecutorService);
+                    recoveryCheckDuration, returnOriginalWhileAllFailed);
         }
 
         private void ensure() {
@@ -204,14 +193,6 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             }
             if (recoveryCheckDuration <= 0) {
                 recoveryCheckDuration = DEFAULT_RECOVERY_CHECK_DURATION;
-            }
-            if (scheduledExecutorService == null) {
-                scheduledExecutorService = Executors.newScheduledThreadPool(1,
-                        new ThreadFactoryBuilder() //
-                                .setNameFormat("failover-check-thread-id-%d") //
-                                .setPriority(Thread.MIN_PRIORITY) //
-                                .setDaemon(true) //
-                                .build());
             }
         }
     }

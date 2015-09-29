@@ -11,7 +11,7 @@ A simple failover library for Java
 <dependency>
     <groupId>com.github.phantomthief</groupId>
     <artifactId>simple-failover</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1</version>
 </dependency>
 ```
 
@@ -23,7 +23,11 @@ Failover<T> failover = RecoverableCheckFailover.<T> newBuilder() //
         .setFailDuration(1, TimeUnit.MINUTES) //
         .setChecker(this::test) //
         .build(orig);
-List<T> available = failover.getAvailable();
+List<T> available = failover.getAvailable(2); // random get 2 available objects.
+// or
+T obj = failover.getOneAvailable(); // random get an available object.
+
+// do something with object...
 
 // when it fails, mark it.
 failover.fail(obj);

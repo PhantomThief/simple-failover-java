@@ -3,7 +3,12 @@
  */
 package com.github.phantomthief.failover.impl;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.stream.Collectors.toList;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.Closeable;
 import java.util.List;
@@ -14,8 +19,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import com.github.phantomthief.failover.Failover;
-import com.github.phantomthief.failover.util.SharedRecoveryCheckScheduledExecutorHolder;
-import com.google.common.base.Preconditions;
+import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -30,10 +34,10 @@ import com.google.common.collect.EvictingQueue;
  */
 public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
-    private final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(getClass());
+    private static org.slf4j.Logger logger = getLogger(RecoverableCheckFailover.class);
     private static final int DEFAULT_FAIL_COUNT = 10;
-    private static final long DEFAULT_FAIL_DURATION = TimeUnit.MINUTES.toMillis(1);
-    private static final long DEFAULT_RECOVERY_CHECK_DURATION = TimeUnit.SECONDS.toMillis(5);
+    private static final long DEFAULT_FAIL_DURATION = MINUTES.toMillis(1);
+    private static final long DEFAULT_RECOVERY_CHECK_DURATION = SECONDS.toMillis(5);
 
     private final List<T> original;
     private final long failDuration;
@@ -55,21 +59,21 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                         return EvictingQueue.create(failCount);
                     }
                 });
-        recoveryFuture = SharedRecoveryCheckScheduledExecutorHolder.getInstance()
-                .scheduleWithFixedDelay(() -> {
-                    if (failedList == null || failedList.isEmpty()) {
-                        return;
-                    }
-                    try {
-                        // 考虑到COWArraySet不支持iterator.remove，所以这里使用搜集->统一清理的策略
-                        List<T> covered = failedList.stream().filter(checker::test).peek(obj -> {
-                            logger.info("obj:{} is recovered during test.", obj);
-                        }).collect(toList());
-                        failedList.removeAll(covered);
-                    } catch (Throwable e) {
-                        logger.error("Ops.", e);
-                    }
-                } , recoveryCheckDuration, recoveryCheckDuration, TimeUnit.MILLISECONDS);
+        recoveryFuture = SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
+            if (failedList == null || failedList.isEmpty()) {
+                return;
+            }
+            try {
+                // 考虑到COWArraySet不支持iterator.remove，所以这里使用搜集->统一清理的策略
+                List<T> covered = failedList.stream() //
+                        .filter(checker::test) //
+                        .peek(obj -> logger.info("obj:{} is recovered during test.", obj)) //
+                        .collect(toList());
+                failedList.removeAll(covered);
+            } catch (Throwable e) {
+                logger.error("Ops.", e);
+            }
+        } , recoveryCheckDuration, recoveryCheckDuration, MILLISECONDS);
     }
 
     /* (non-Javadoc)
@@ -93,7 +97,9 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         }
         if (addToFail) {
             failedList.add(object);
-            logger.trace("server {} failed. add to fail list.", object);
+            if (logger.isTraceEnabled()) {
+                logger.trace("server {} failed. add to fail list.", object);
+            }
         }
     }
 
@@ -137,10 +143,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public String toString() {
-        return "RecoverableCheckFailover [logger=" + logger + ", original=" + original
-                + ", failDuration=" + failDuration + ", failedList=" + failedList
-                + ", failCountMap=" + failCountMap + ", returnOriginalWhileAllFailed="
-                + returnOriginalWhileAllFailed + "]";
+        return "RecoverableCheckFailover [" + original + "]";
     }
 
     public static final class Builder<T> {
@@ -157,7 +160,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         }
 
         public Builder<T> setChecker(Predicate<T> checker) {
-            this.checker = checker;
+            this.checker = catching(checker);
             return this;
         }
 
@@ -183,7 +186,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         }
 
         private void ensure() {
-            Preconditions.checkNotNull(checker);
+            checkNotNull(checker);
 
             if (failCount <= 0) {
                 failCount = DEFAULT_FAIL_COUNT;
@@ -195,10 +198,20 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                 recoveryCheckDuration = DEFAULT_RECOVERY_CHECK_DURATION;
             }
         }
+
+        private Predicate<T> catching(Predicate<T> predicate) {
+            return t -> {
+                try {
+                    return predicate.test(t);
+                } catch (Throwable e) {
+                    logger.error("Ops. fail to test:{}", t, e);
+                    return false;
+                }
+            };
+        }
     }
 
     public static final <T> Builder<T> newBuilder() {
         return new Builder<>();
     }
-
 }

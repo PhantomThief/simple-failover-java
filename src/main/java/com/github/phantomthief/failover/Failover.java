@@ -20,7 +20,6 @@ public interface Failover<T> {
     /**
      * better use {@code #getAvailable(int)} or {@code #getOneAvailable()}
      */
-    @Deprecated
     public List<T> getAvailable();
 
     public Set<T> getFailed();

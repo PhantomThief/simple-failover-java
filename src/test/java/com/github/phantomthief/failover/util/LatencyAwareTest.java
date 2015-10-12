@@ -28,7 +28,7 @@ public class LatencyAwareTest {
 
     @Test
     public void test() {
-        List<Integer> candidates = Lists.newArrayList(1, 2, 3);
+        List<Integer> candidates = Lists.newArrayList(1, 2, 3, 10);
         LatencyAware<Integer> latencyAware = LatencyAware.create();
         ExecutorService executorService = Executors.newFixedThreadPool(10);
         for (int i = 0; i < 10000; i++) {

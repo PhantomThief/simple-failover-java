@@ -21,8 +21,10 @@ public class Weight<T> {
     private long maxWeight = 0;
 
     public Weight<T> add(T node, long weight) {
-        nodes.put(Range.closedOpen(maxWeight, maxWeight + weight), node);
-        maxWeight += weight;
+        if (weight > 0) {
+            nodes.put(Range.closedOpen(maxWeight, maxWeight + weight), node);
+            maxWeight += weight;
+        }
         return this;
     }
 

@@ -52,14 +52,10 @@ public class LatencyAware<T> {
         Map<T, Long> weightMap = candidates.stream().collect(toMap(identity(), t -> {
             EvictingQueue<Long> queue = latencies.getUnchecked(t);
             long result;
-            if (queue == null) {
-                result = initLatency;
-            } else {
-                synchronized (queue) {
-                    result = queue.stream().mapToLong(Long::longValue).sum();
-                    if (result == 0) {
-                        result = initLatency;
-                    }
+            synchronized (queue) {
+                result = queue.stream().mapToLong(Long::longValue).sum();
+                if (result == 0) {
+                    result = initLatency;
                 }
             }
             sum.addAndGet(result);
@@ -71,6 +67,9 @@ public class LatencyAware<T> {
     }
 
     public void cost(T obj, long cost) {
+        if (cost <= 0) {
+            return;
+        }
         EvictingQueue<Long> queue = latencies.getUnchecked(obj);
         synchronized (queue) {
             queue.add(cost);

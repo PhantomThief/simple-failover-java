@@ -3,7 +3,7 @@
  */
 package com.github.phantomthief.failover.util;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
@@ -25,7 +25,7 @@ import com.google.common.collect.EvictingQueue;
 public class LatencyAware<T> {
 
     private static final long DEFAULT_INIT_LATENCY = 1;
-    private static final int DEFAULT_EVALUTION_COUNT = 50;
+    private static final int DEFAULT_EVALUTION_COUNT = 10;
 
     private static class LazyHolder {
 
@@ -60,9 +60,9 @@ public class LatencyAware<T> {
             long result;
             synchronized (queue) {
                 result = queue.stream().mapToLong(Long::longValue).sum();
-                if (result == 0) {
-                    result = initLatency;
-                }
+            }
+            if (result == 0) {
+                result = initLatency;
             }
             sum.addAndGet(result);
             return result;
@@ -73,7 +73,7 @@ public class LatencyAware<T> {
     }
 
     public void cost(T obj, long cost) {
-        if (cost <= 0) {
+        if (cost < 0) {
             return;
         }
         EvictingQueue<Long> queue = latencies.getUnchecked(obj);
@@ -99,7 +99,7 @@ public class LatencyAware<T> {
             return function.apply(obj);
         } finally {
             stopwatch.stop();
-            cost(obj, stopwatch.elapsed(MILLISECONDS));
+            cost(obj, stopwatch.elapsed(MICROSECONDS));
         }
     }
 

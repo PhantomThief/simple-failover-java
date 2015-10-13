@@ -25,7 +25,13 @@ import com.google.common.collect.EvictingQueue;
 public class LatencyAware<T> {
 
     private static final long DEFAULT_INIT_LATENCY = 1;
-    private static final int DEFAULT_EVALUTION_COUNT = 10;
+    private static final int DEFAULT_EVALUTION_COUNT = 50;
+
+    private static class LazyHolder {
+
+        private static final LatencyAware<Object> INSTANCE = new LatencyAware<>(
+                DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_COUNT);
+    }
 
     private final long initLatency;
     private final int evaluationCount;
@@ -95,6 +101,11 @@ public class LatencyAware<T> {
             stopwatch.stop();
             cost(obj, stopwatch.elapsed(MILLISECONDS));
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    public static final <T> LatencyAware<T> shared() {
+        return (LatencyAware<T>) LazyHolder.INSTANCE;
     }
 
     public static final <T> LatencyAware<T> create() {

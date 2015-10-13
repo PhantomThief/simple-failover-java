@@ -5,13 +5,13 @@ package com.github.phantomthief.failover.util;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.concurrent.TimeUnit.DAYS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.Test;
@@ -34,7 +34,7 @@ public class LatencyAwareTest {
         for (int i = 0; i < 10000; i++) {
             executorService.execute(() -> {
                 latencyAware.run(candidates, j -> {
-                    sleepUninterruptibly(j, TimeUnit.MILLISECONDS);
+                    sleepUninterruptibly(j, MILLISECONDS);
                     callCount.computeIfAbsent(j, o -> new AtomicInteger()).incrementAndGet();
                 });
             });

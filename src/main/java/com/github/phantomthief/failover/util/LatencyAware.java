@@ -4,6 +4,8 @@
 package com.github.phantomthief.failover.util;
 
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 
@@ -13,11 +15,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.github.phantomthief.stats.n.DurationStats;
+import com.github.phantomthief.stats.n.counter.SimpleCounter;
+import com.github.phantomthief.stats.n.impl.SimpleDurationStats;
 import com.google.common.base.Stopwatch;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
-import com.google.common.collect.EvictingQueue;
 
 /**
  * @author w.vela
@@ -25,29 +29,35 @@ import com.google.common.collect.EvictingQueue;
 public class LatencyAware<T> {
 
     private static final long DEFAULT_INIT_LATENCY = 1;
-    private static final int DEFAULT_EVALUTION_COUNT = 10;
+    private static final long DEFAULT_EVALUTION_DURATION = SECONDS.toMillis(10);
 
     private static class LazyHolder {
 
         private static final LatencyAware<Object> INSTANCE = new LatencyAware<>(
-                DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_COUNT);
+                DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_DURATION);
     }
 
     private final long initLatency;
-    private final int evaluationCount;
-    private final LoadingCache<T, EvictingQueue<Long>> latencies = CacheBuilder.newBuilder() //
+    private final long evalutionDuration;
+    private final LoadingCache<T, SimpleDurationStats<SimpleCounter>> costMap = CacheBuilder
+            .newBuilder() //
             .weakKeys() //
-            .build(new CacheLoader<T, EvictingQueue<Long>>() {
+            .<T, SimpleDurationStats<SimpleCounter>> removalListener(notify -> {
+                notify.getValue().close();
+            }) //
+            .build(new CacheLoader<T, SimpleDurationStats<SimpleCounter>>() {
 
                 @Override
-                public EvictingQueue<Long> load(T key) throws Exception {
-                    return EvictingQueue.create(evaluationCount);
+                public SimpleDurationStats<SimpleCounter> load(T key) throws Exception {
+                    return SimpleDurationStats.newBuilder() //
+                            .addDuration(evalutionDuration, MILLISECONDS) //
+                            .build();
                 }
             });
 
-    private LatencyAware(long initLatency, int evaluationCount) {
+    private LatencyAware(long initLatency, long evalutionDuration) {
         this.initLatency = initLatency;
-        this.evaluationCount = evaluationCount;
+        this.evalutionDuration = evalutionDuration;
     }
 
     public T get(Collection<T> candidates) {
@@ -56,11 +66,10 @@ public class LatencyAware<T> {
         }
         AtomicLong sum = new AtomicLong();
         Map<T, Long> weightMap = candidates.stream().collect(toMap(identity(), t -> {
-            EvictingQueue<Long> queue = latencies.getUnchecked(t);
-            long result;
-            synchronized (queue) {
-                result = queue.stream().mapToLong(Long::longValue).sum();
-            }
+            DurationStats<SimpleCounter> stats = costMap.getUnchecked(t);
+            SimpleCounter counter = stats.getStats().get(evalutionDuration);
+            long result = counter == null ? initLatency : (long) ((double) counter.getCost()
+                    / counter.getCount());
             if (result == 0) {
                 result = initLatency;
             }
@@ -76,10 +85,7 @@ public class LatencyAware<T> {
         if (cost < 0) {
             return;
         }
-        EvictingQueue<Long> queue = latencies.getUnchecked(obj);
-        synchronized (queue) {
-            queue.add(cost);
-        }
+        costMap.getUnchecked(obj).stat(SimpleCounter.stats(cost));
     }
 
     public void run(Collection<T> candidates, Consumer<T> function) {
@@ -109,6 +115,6 @@ public class LatencyAware<T> {
     }
 
     public static final <T> LatencyAware<T> create() {
-        return new LatencyAware<>(DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_COUNT);
+        return new LatencyAware<>(DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_DURATION);
     }
 }

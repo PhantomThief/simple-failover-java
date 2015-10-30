@@ -64,6 +64,9 @@ public class LatencyAware<T> {
         if (candidates == null || candidates.isEmpty()) {
             return null;
         }
+        if (candidates.size() == 1) {
+            return candidates.iterator().next();
+        }
         AtomicLong sum = new AtomicLong();
         Map<T, Long> weightMap = candidates.stream().collect(toMap(identity(), t -> {
             DurationStats<SimpleCounter> stats = costMap.getUnchecked(t);

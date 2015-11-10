@@ -159,9 +159,11 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             return this;
         }
 
-        public Builder<T> setChecker(Predicate<T> checker) {
-            this.checker = catching(checker);
-            return this;
+        @SuppressWarnings("unchecked")
+        public <E> Builder<E> setChecker(Predicate<E> checker) {
+            Builder<E> thisBuilder = (Builder<E>) this;
+            thisBuilder.checker = thisBuilder.catching(checker);
+            return thisBuilder;
         }
 
         public Builder<T> setRecoveryCheckDuration(long recoveryCheckDuration, TimeUnit unit) {
@@ -179,10 +181,12 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             return this;
         }
 
-        public RecoverableCheckFailover<T> build(List<T> original) {
-            ensure();
-            return new RecoverableCheckFailover<>(original, checker, failCount, failDuration,
-                    recoveryCheckDuration, returnOriginalWhileAllFailed);
+        @SuppressWarnings("unchecked")
+        public <E> RecoverableCheckFailover<E> build(List<E> original) {
+            Builder<E> thisBuilder = (Builder<E>) this;
+            thisBuilder.ensure();
+            return new RecoverableCheckFailover<>(original, thisBuilder.checker, failCount,
+                    failDuration, recoveryCheckDuration, returnOriginalWhileAllFailed);
         }
 
         private void ensure() {
@@ -211,7 +215,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         }
     }
 
-    public static <T> Builder<T> newBuilder() {
+    public static Builder<Object> newBuilder() {
         return new Builder<>();
     }
 }

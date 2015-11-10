@@ -59,6 +59,11 @@
             <artifactId>stats-helper</artifactId>
             <version>0.2.1-SNAPSHOT</version>
         </dependency>
+        <dependency>
+            <groupId>com.github.phantomthief</groupId>
+            <artifactId>more-lambdas</artifactId>
+            <version>0.1.4-SNAPSHOT</version>
+        </dependency>
 
         <dependency>
             <groupId>junit</groupId>

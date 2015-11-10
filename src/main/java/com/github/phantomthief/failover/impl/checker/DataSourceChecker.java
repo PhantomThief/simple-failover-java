@@ -22,5 +22,4 @@ public class DataSourceChecker {
             return false;
         }
     }
-
 }

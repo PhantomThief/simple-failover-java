@@ -19,14 +19,14 @@ public class RandomListUtils {
         throw new UnsupportedOperationException();
     }
 
-    public static final <T> T getRandom(List<T> source) {
+    public static <T> T getRandom(List<T> source) {
         if (source == null || source.isEmpty()) {
             return null;
         }
         return source.get(RANDOM.nextInt(source.size()));
     }
 
-    public static final <T> List<T> getRandom(List<T> source, int size) {
+    public static <T> List<T> getRandom(List<T> source, int size) {
         if (source == null || source.isEmpty()) {
             return Collections.emptyList();
         }

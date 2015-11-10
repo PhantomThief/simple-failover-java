@@ -113,11 +113,11 @@ public class LatencyAware<T> {
     }
 
     @SuppressWarnings("unchecked")
-    public static final <T> LatencyAware<T> shared() {
+    public static <T> LatencyAware<T> shared() {
         return (LatencyAware<T>) LazyHolder.INSTANCE;
     }
 
-    public static final <T> LatencyAware<T> create() {
+    public static <T> LatencyAware<T> create() {
         return new LatencyAware<>(DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_DURATION);
     }
 }

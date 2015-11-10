@@ -211,7 +211,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         }
     }
 
-    public static final <T> Builder<T> newBuilder() {
+    public static <T> Builder<T> newBuilder() {
         return new Builder<>();
     }
 }

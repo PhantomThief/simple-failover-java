@@ -207,7 +207,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         }
 
         @SuppressWarnings("unchecked")
-        public <E> Builder<E> checker(Predicate<E> failChecker) {
+        public <E> Builder<E> checker(Predicate<? super E> failChecker) {
             checkNotNull(failChecker);
             Builder<E> thisBuilder = (Builder<E>) this;
             thisBuilder.checker = t -> {
@@ -221,12 +221,12 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             return thisBuilder;
         }
 
-        public <E> WeightFailover<E> build(Collection<E> original) {
+        public <E> WeightFailover<E> build(Collection<? extends E> original) {
             return build(original, DEFAULT_INIT_WEIGHT);
         }
 
         @SuppressWarnings("unchecked")
-        public <E> WeightFailover<E> build(Collection<E> original, int initWeight) {
+        public <E> WeightFailover<E> build(Collection<? extends E> original, int initWeight) {
             checkNotNull(original);
             checkArgument(initWeight > 0);
             Builder<E> thisBuilder = (Builder<E>) this;

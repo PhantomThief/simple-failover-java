@@ -8,6 +8,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import java.util.Collection;
 import java.util.Map;
@@ -28,6 +29,8 @@ import com.google.common.cache.LoadingCache;
  */
 public class LatencyAware<T> {
 
+    private static org.slf4j.Logger logger = getLogger(LatencyAware.class);
+
     private static final long DEFAULT_INIT_LATENCY = 1;
     private static final long DEFAULT_EVALUTION_DURATION = SECONDS.toMillis(10);
 
@@ -39,16 +42,19 @@ public class LatencyAware<T> {
 
     private final long initLatency;
     private final long evalutionDuration;
-    private final LoadingCache<T, SimpleDurationStats<SimpleCounter>> costMap = CacheBuilder
-            .newBuilder() //
+    private final LoadingCache<T, DurationStats<SimpleCounter>> costMap = CacheBuilder.newBuilder() //
             .weakKeys() //
-            .<T, SimpleDurationStats<SimpleCounter>> removalListener(notify -> {
-                notify.getValue().close();
+            .<T, DurationStats<SimpleCounter>> removalListener(notify -> {
+                try {
+                    notify.getValue().close();
+                } catch (Exception e) {
+                    logger.error("Ops.", e);
+                }
             }) //
-            .build(new CacheLoader<T, SimpleDurationStats<SimpleCounter>>() {
+            .build(new CacheLoader<T, DurationStats<SimpleCounter>>() {
 
                 @Override
-                public SimpleDurationStats<SimpleCounter> load(T key) throws Exception {
+                public DurationStats<SimpleCounter> load(T key) throws Exception {
                     return SimpleDurationStats.newBuilder() //
                             .addDuration(evalutionDuration, MILLISECONDS) //
                             .build();

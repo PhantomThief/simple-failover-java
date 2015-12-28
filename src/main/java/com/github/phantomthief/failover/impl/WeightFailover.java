@@ -66,7 +66,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                     .collect(toSet());
             recoveriedObjects
                     .forEach(recoveried -> currentWeightMap.put(recoveried, recoveriedInitWeight));
-        } , failCheckDuration, failCheckDuration, TimeUnit.MILLISECONDS);
+        }, failCheckDuration, failCheckDuration, TimeUnit.MILLISECONDS);
     }
 
     /* (non-Javadoc)
@@ -225,13 +225,17 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             return build(original, DEFAULT_INIT_WEIGHT);
         }
 
-        @SuppressWarnings("unchecked")
         public <E> WeightFailover<E> build(Collection<? extends E> original, int initWeight) {
             checkNotNull(original);
             checkArgument(initWeight > 0);
+            return build(original.stream().collect(toMap(identity(), i -> initWeight)));
+        }
+
+        @SuppressWarnings("unchecked")
+        public <E> WeightFailover<E> build(Map<? extends E, Integer> original) {
+            checkNotNull(original);
             Builder<E> thisBuilder = (Builder<E>) this;
-            thisBuilder.initWeightMap = original.stream()
-                    .collect(toMap(identity(), i -> initWeight));
+            thisBuilder.initWeightMap = (Map<E, Integer>) original;
             return thisBuilder.build();
         }
 

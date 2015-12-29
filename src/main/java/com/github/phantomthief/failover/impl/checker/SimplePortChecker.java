@@ -9,6 +9,8 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
 
+import com.google.common.net.HostAndPort;
+
 /**
  * @author w.vela
  */
@@ -53,6 +55,10 @@ public class SimplePortChecker {
 
     public static boolean check(String host, int port) {
         return check(host, port, DEFAULT_CONNECTION_TIMEOUT);
+    }
+
+    public static boolean check(HostAndPort hostAndPort) {
+        return check(hostAndPort.getHostText(), hostAndPort.getPort(), DEFAULT_CONNECTION_TIMEOUT);
     }
 
     public static boolean check(String host, int port, int connectionTimeoutInMs) {

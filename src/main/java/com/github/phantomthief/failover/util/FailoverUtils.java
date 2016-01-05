@@ -3,6 +3,9 @@
  */
 package com.github.phantomthief.failover.util;
 
+import static java.util.function.Function.identity;
+
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
@@ -63,22 +66,32 @@ public class FailoverUtils {
         }
     }
 
-    public static <T, E> T proxy(Class<T> iface, Failover<T> failover) {
+    public static <T> T proxy(Class<T> iface, Failover<T> failover) {
         return proxy(iface, failover, null);
     }
 
-    public static <T, E> T proxy(Class<T> iface, Failover<T> failover,
+    public static <T> T proxy(Class<T> iface, Failover<T> failover,
             Predicate<Throwable> failChecker) {
         return proxy(iface, () -> failover, failChecker);
     }
 
-    public static <T, E> T proxy(Class<T> iface, Supplier<Failover<T>> failover) {
+    public static <T> T proxy(Class<T> iface, Supplier<Failover<T>> failover) {
         return proxy(iface, failover, null);
     }
 
-    public static <T, E> T proxy(Class<T> iface, Supplier<Failover<T>> failover,
+    public static <T> T proxy(Class<T> iface, Supplier<Failover<T>> failover,
             Predicate<Throwable> failChecker) {
+        return transformProxy(iface, failover, identity(), failChecker);
+    }
+
+    public static <T, E> T transformProxy(Class<T> iface, Supplier<Failover<E>> failover,
+            Function<E, T> tranformFunction) {
+        return transformProxy(iface, failover, tranformFunction, null);
+    }
+
+    public static <T, E> T transformProxy(Class<T> iface, Supplier<Failover<E>> failover,
+            Function<E, T> tranformFunction, Predicate<Throwable> failChecker) {
         return Reflection.newProxy(iface, (proxy, method, args) -> run(failover.get(),
-                res -> method.invoke(res, args), failChecker));
+                res -> method.invoke(tranformFunction.apply(res), args), failChecker));
     }
 }

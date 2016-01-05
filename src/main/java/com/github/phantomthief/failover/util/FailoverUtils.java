@@ -10,6 +10,7 @@ import com.github.phantomthief.failover.exception.NoAvailableResourceException;
 import com.github.phantomthief.util.ThrowableConsumer;
 import com.github.phantomthief.util.ThrowableFunction;
 import com.google.common.base.Throwables;
+import com.google.common.reflect.Reflection;
 
 /**
  * @author w.vela
@@ -59,5 +60,11 @@ public class FailoverUtils {
         } else {
             throw new NoAvailableResourceException();
         }
+    }
+
+    public static <T, E> T proxy(Class<T> iface, T toProxyObject, Failover<E> failover,
+            Predicate<Throwable> failChecker) {
+        return Reflection.newProxy(iface, (proxy, method, args) -> run(failover,
+                res -> method.invoke(res, args), failChecker));
     }
 }

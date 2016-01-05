@@ -3,7 +3,6 @@
  */
 package com.github.phantomthief.failover.impl;
 
-import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -15,7 +14,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import com.github.phantomthief.failover.Failover;
@@ -34,10 +32,10 @@ import com.google.common.collect.EvictingQueue;
  */
 public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
-    private static org.slf4j.Logger logger = getLogger(RecoverableCheckFailover.class);
-    private static final int DEFAULT_FAIL_COUNT = 10;
-    private static final long DEFAULT_FAIL_DURATION = MINUTES.toMillis(1);
-    private static final long DEFAULT_RECOVERY_CHECK_DURATION = SECONDS.toMillis(5);
+    static org.slf4j.Logger logger = getLogger(RecoverableCheckFailover.class);
+    static final int DEFAULT_FAIL_COUNT = 10;
+    static final long DEFAULT_FAIL_DURATION = MINUTES.toMillis(1);
+    static final long DEFAULT_RECOVERY_CHECK_DURATION = SECONDS.toMillis(5);
 
     private final List<T> original;
     private final long failDuration;
@@ -46,7 +44,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
     private final boolean returnOriginalWhileAllFailed;
     private final ScheduledFuture<?> recoveryFuture;
 
-    private RecoverableCheckFailover(List<T> original, Predicate<T> checker, int failCount,
+    RecoverableCheckFailover(List<T> original, Predicate<T> checker, int failCount,
             long failDuration, long recoveryCheckDuration, boolean returnOriginalWhileAllFailed) {
         this.returnOriginalWhileAllFailed = returnOriginalWhileAllFailed;
         this.original = original;
@@ -73,7 +71,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             } catch (Throwable e) {
                 logger.error("Ops.", e);
             }
-        } , recoveryCheckDuration, recoveryCheckDuration, MILLISECONDS);
+        }, recoveryCheckDuration, recoveryCheckDuration, MILLISECONDS);
     }
 
     /* (non-Javadoc)
@@ -146,76 +144,11 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         return "RecoverableCheckFailover [" + original + "]";
     }
 
-    public static final class Builder<T> {
-
-        private int failCount;
-        private long failDuration;
-        private long recoveryCheckDuration;
-        private boolean returnOriginalWhileAllFailed;
-        private Predicate<T> checker;
-
-        public Builder<T> setFailCount(int failCount) {
-            this.failCount = failCount;
-            return this;
-        }
-
-        @SuppressWarnings("unchecked")
-        public <E> Builder<E> setChecker(Predicate<? super E> checker) {
-            Builder<E> thisBuilder = (Builder<E>) this;
-            thisBuilder.checker = thisBuilder.catching((Predicate<E>) checker);
-            return thisBuilder;
-        }
-
-        public Builder<T> setRecoveryCheckDuration(long recoveryCheckDuration, TimeUnit unit) {
-            this.recoveryCheckDuration = unit.toMillis(recoveryCheckDuration);
-            return this;
-        }
-
-        public Builder<T> setFailDuration(long failDuration, TimeUnit unit) {
-            this.failDuration = unit.toMillis(failDuration);
-            return this;
-        }
-
-        public Builder<T> setReturnOriginalWhileAllFailed(boolean returnOriginalWhileAllFailed) {
-            this.returnOriginalWhileAllFailed = returnOriginalWhileAllFailed;
-            return this;
-        }
-
-        @SuppressWarnings("unchecked")
-        public <E> RecoverableCheckFailover<E> build(List<? extends E> original) {
-            Builder<E> thisBuilder = (Builder<E>) this;
-            thisBuilder.ensure();
-            return new RecoverableCheckFailover<>((List<E>) original, thisBuilder.checker,
-                    failCount, failDuration, recoveryCheckDuration, returnOriginalWhileAllFailed);
-        }
-
-        private void ensure() {
-            checkNotNull(checker);
-
-            if (failCount <= 0) {
-                failCount = DEFAULT_FAIL_COUNT;
-            }
-            if (failDuration <= 0) {
-                failDuration = DEFAULT_FAIL_DURATION;
-            }
-            if (recoveryCheckDuration <= 0) {
-                recoveryCheckDuration = DEFAULT_RECOVERY_CHECK_DURATION;
-            }
-        }
-
-        private Predicate<T> catching(Predicate<T> predicate) {
-            return t -> {
-                try {
-                    return predicate.test(t);
-                } catch (Throwable e) {
-                    logger.error("Ops. fail to test:{}", t, e);
-                    return false;
-                }
-            };
-        }
+    public static RecoverableCheckFailoverBuilder<Object> newBuilder() {
+        return new RecoverableCheckFailoverBuilder<>();
     }
 
-    public static Builder<Object> newBuilder() {
-        return new Builder<>();
+    public static <E> GenericRecoverableCheckFailoverBuilder<E> newGenericBuilder() {
+        return new GenericRecoverableCheckFailoverBuilder<>(newBuilder());
     }
 }

@@ -62,7 +62,11 @@ public class FailoverUtils {
         }
     }
 
-    public static <T, E> T proxy(Class<T> iface, T toProxyObject, Failover<E> failover,
+    public static <T, E> T proxy(Class<T> iface, Failover<T> failover) {
+        return proxy(iface, failover, null);
+    }
+
+    public static <T, E> T proxy(Class<T> iface, Failover<T> failover,
             Predicate<Throwable> failChecker) {
         return Reflection.newProxy(iface, (proxy, method, args) -> run(failover,
                 res -> method.invoke(res, args), failChecker));

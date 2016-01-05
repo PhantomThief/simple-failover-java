@@ -4,6 +4,7 @@
 package com.github.phantomthief.failover.util;
 
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import com.github.phantomthief.failover.Failover;
 import com.github.phantomthief.failover.exception.NoAvailableResourceException;
@@ -68,7 +69,16 @@ public class FailoverUtils {
 
     public static <T, E> T proxy(Class<T> iface, Failover<T> failover,
             Predicate<Throwable> failChecker) {
-        return Reflection.newProxy(iface, (proxy, method, args) -> run(failover,
+        return proxy(iface, () -> failover, failChecker);
+    }
+
+    public static <T, E> T proxy(Class<T> iface, Supplier<Failover<T>> failover) {
+        return proxy(iface, failover, null);
+    }
+
+    public static <T, E> T proxy(Class<T> iface, Supplier<Failover<T>> failover,
+            Predicate<Throwable> failChecker) {
+        return Reflection.newProxy(iface, (proxy, method, args) -> run(failover.get(),
                 res -> method.invoke(res, args), failChecker));
     }
 }

@@ -29,17 +29,9 @@ import com.google.common.cache.LoadingCache;
  */
 public class LatencyAware<T> {
 
-    private static org.slf4j.Logger logger = getLogger(LatencyAware.class);
-
     private static final long DEFAULT_INIT_LATENCY = 1;
     private static final long DEFAULT_EVALUTION_DURATION = SECONDS.toMillis(10);
-
-    private static class LazyHolder {
-
-        private static final LatencyAware<Object> INSTANCE = new LatencyAware<>(
-                DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_DURATION);
-    }
-
+    private static org.slf4j.Logger logger = getLogger(LatencyAware.class);
     private final long initLatency;
     private final long evalutionDuration;
     private final LoadingCache<T, DurationStats<SimpleCounter>> costMap = CacheBuilder.newBuilder() //
@@ -60,10 +52,18 @@ public class LatencyAware<T> {
                             .build();
                 }
             });
-
     private LatencyAware(long initLatency, long evalutionDuration) {
         this.initLatency = initLatency;
         this.evalutionDuration = evalutionDuration;
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> LatencyAware<T> shared() {
+        return (LatencyAware<T>) LazyHolder.INSTANCE;
+    }
+
+    public static <T> LatencyAware<T> create() {
+        return new LatencyAware<>(DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_DURATION);
     }
 
     public T get(Collection<T> candidates) {
@@ -74,17 +74,19 @@ public class LatencyAware<T> {
             return candidates.iterator().next();
         }
         AtomicLong sum = new AtomicLong();
-        Map<T, Long> weightMap = candidates.stream().collect(toMap(identity(), t -> {
-            DurationStats<SimpleCounter> stats = costMap.getUnchecked(t);
-            SimpleCounter counter = stats.getStats().get(evalutionDuration);
-            long result = counter == null ? initLatency : (long) ((double) counter.getCost()
-                    / counter.getCount());
-            if (result == 0) {
-                result = initLatency;
-            }
-            sum.addAndGet(result);
-            return result;
-        }));
+        Map<T, Long> weightMap = candidates.stream().collect(
+                toMap(identity(),
+                        t -> {
+                            DurationStats<SimpleCounter> stats = costMap.getUnchecked(t);
+                            SimpleCounter counter = stats.getStats().get(evalutionDuration);
+                            long result = counter == null ? initLatency : (long) ((double) counter
+                                    .getCost() / counter.getCount());
+                            if (result == 0) {
+                                result = initLatency;
+                            }
+                            sum.addAndGet(result);
+                            return result;
+                        }));
         Weight<T> weight = new Weight<>();
         weightMap.forEach((k, w) -> weight.add(k, sum.get() - w));
         return weight.get();
@@ -118,12 +120,9 @@ public class LatencyAware<T> {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    public static <T> LatencyAware<T> shared() {
-        return (LatencyAware<T>) LazyHolder.INSTANCE;
-    }
+    private static class LazyHolder {
 
-    public static <T> LatencyAware<T> create() {
-        return new LatencyAware<>(DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_DURATION);
+        private static final LatencyAware<Object> INSTANCE = new LatencyAware<>(
+                DEFAULT_INIT_LATENCY, DEFAULT_EVALUTION_DURATION);
     }
 }

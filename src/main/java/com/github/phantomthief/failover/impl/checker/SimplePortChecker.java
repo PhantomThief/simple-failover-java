@@ -23,18 +23,9 @@ public class SimplePortChecker {
     @Deprecated
     private final int connectTimeout;
 
-    /**
-     * @param connectTimeout
-     */
     @Deprecated
     private SimplePortChecker(int connectTimeout) {
         this.connectTimeout = connectTimeout;
-    }
-
-    private static class LazyHolder {
-
-        private static final SimplePortChecker INSTANCE = new SimplePortChecker(
-                DEFAULT_CONNECTION_TIMEOUT);
     }
 
     /**
@@ -79,5 +70,11 @@ public class SimplePortChecker {
     @Deprecated
     public boolean test(String host, int port) {
         return SimplePortChecker.check(host, port, connectTimeout);
+    }
+
+    private static class LazyHolder {
+
+        private static final SimplePortChecker INSTANCE = new SimplePortChecker(
+                DEFAULT_CONNECTION_TIMEOUT);
     }
 }

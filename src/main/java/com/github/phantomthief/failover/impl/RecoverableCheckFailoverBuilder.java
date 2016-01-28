@@ -4,13 +4,22 @@
 package com.github.phantomthief.failover.impl;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
+import org.slf4j.Logger;
+
 public final class RecoverableCheckFailoverBuilder<T> {
 
+    private static final int DEFAULT_FAIL_COUNT = 10;
+    private static final long DEFAULT_FAIL_DURATION = MINUTES.toMillis(1);
+    private static final long DEFAULT_RECOVERY_CHECK_DURATION = SECONDS.toMillis(5);
+    private static final Logger logger = getLogger(RecoverableCheckFailover.class);
     private int failCount;
     private long failDuration;
     private long recoveryCheckDuration;
@@ -29,7 +38,8 @@ public final class RecoverableCheckFailoverBuilder<T> {
         return thisBuilder;
     }
 
-    public RecoverableCheckFailoverBuilder<T> setRecoveryCheckDuration(long recoveryCheckDuration, TimeUnit unit) {
+    public RecoverableCheckFailoverBuilder<T> setRecoveryCheckDuration(long recoveryCheckDuration,
+            TimeUnit unit) {
         this.recoveryCheckDuration = unit.toMillis(recoveryCheckDuration);
         return this;
     }
@@ -39,7 +49,8 @@ public final class RecoverableCheckFailoverBuilder<T> {
         return this;
     }
 
-    public RecoverableCheckFailoverBuilder<T> setReturnOriginalWhileAllFailed(boolean returnOriginalWhileAllFailed) {
+    public RecoverableCheckFailoverBuilder<T> setReturnOriginalWhileAllFailed(
+            boolean returnOriginalWhileAllFailed) {
         this.returnOriginalWhileAllFailed = returnOriginalWhileAllFailed;
         return this;
     }
@@ -56,13 +67,13 @@ public final class RecoverableCheckFailoverBuilder<T> {
         checkNotNull(checker);
 
         if (failCount <= 0) {
-            failCount = RecoverableCheckFailover.DEFAULT_FAIL_COUNT;
+            failCount = DEFAULT_FAIL_COUNT;
         }
         if (failDuration <= 0) {
-            failDuration = RecoverableCheckFailover.DEFAULT_FAIL_DURATION;
+            failDuration = DEFAULT_FAIL_DURATION;
         }
         if (recoveryCheckDuration <= 0) {
-            recoveryCheckDuration = RecoverableCheckFailover.DEFAULT_RECOVERY_CHECK_DURATION;
+            recoveryCheckDuration = DEFAULT_RECOVERY_CHECK_DURATION;
         }
     }
 
@@ -71,7 +82,7 @@ public final class RecoverableCheckFailoverBuilder<T> {
             try {
                 return predicate.test(t);
             } catch (Throwable e) {
-                RecoverableCheckFailover.logger.error("Ops. fail to test:{}", t, e);
+                logger.error("Ops. fail to test:{}", t, e);
                 return false;
             }
         };

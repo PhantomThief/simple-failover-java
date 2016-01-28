@@ -32,12 +32,10 @@ public class LatencyAwareTest {
         LatencyAware<Integer> latencyAware = LatencyAware.create();
         ExecutorService executorService = Executors.newFixedThreadPool(10);
         for (int i = 0; i < 10000; i++) {
-            executorService.execute(() -> {
-                latencyAware.run(candidates, j -> {
-                    sleepUninterruptibly(j, MILLISECONDS);
-                    callCount.computeIfAbsent(j, o -> new AtomicInteger()).incrementAndGet();
-                });
-            });
+            executorService.execute(() -> latencyAware.run(candidates, j -> {
+                sleepUninterruptibly(j, MILLISECONDS);
+                callCount.computeIfAbsent(j, o -> new AtomicInteger()).incrementAndGet();
+            }));
         }
         MoreExecutors.shutdownAndAwaitTermination(executorService, 1, DAYS);
         System.out.println(callCount);

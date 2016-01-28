@@ -27,8 +27,8 @@ public class GenericRecoverableCheckFailoverBuilder<E> {
         return this;
     }
 
-    public GenericRecoverableCheckFailoverBuilder<E>
-            setRecoveryCheckDuration(long recoveryCheckDuration, TimeUnit unit) {
+    public GenericRecoverableCheckFailoverBuilder<E> setRecoveryCheckDuration(
+            long recoveryCheckDuration, TimeUnit unit) {
         builder.setRecoveryCheckDuration(recoveryCheckDuration, unit);
         return this;
     }
@@ -39,8 +39,8 @@ public class GenericRecoverableCheckFailoverBuilder<E> {
         return this;
     }
 
-    public GenericRecoverableCheckFailoverBuilder<E>
-            setReturnOriginalWhileAllFailed(boolean returnOriginalWhileAllFailed) {
+    public GenericRecoverableCheckFailoverBuilder<E> setReturnOriginalWhileAllFailed(
+            boolean returnOriginalWhileAllFailed) {
         builder.setReturnOriginalWhileAllFailed(returnOriginalWhileAllFailed);
         return this;
     }

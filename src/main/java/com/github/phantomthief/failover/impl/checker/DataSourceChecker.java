@@ -12,9 +12,6 @@ import javax.sql.DataSource;
  */
 public class DataSourceChecker {
 
-    /* (non-Javadoc)
-     * @see java.util.function.Predicate#test(java.lang.Object)
-     */
     public static boolean test(DataSource t) {
         try (Connection conn = t.getConnection()) {
             return conn != null;

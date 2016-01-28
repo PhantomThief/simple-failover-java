@@ -34,7 +34,7 @@ import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
  * 
  * @author w.vela
  */
-public class WeightFailover<T> implements Failover<T>, Closeable {
+class WeightFailover<T> implements Failover<T>, Closeable {
 
     static org.slf4j.Logger logger = getLogger(WeightFailover.class);
 
@@ -51,15 +51,24 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         this.successIncreaceWeight = successIncreaceWeight;
         this.initWeightMap = new ConcurrentHashMap<>(initWeightMap);
         this.currentWeightMap = new ConcurrentHashMap<>(initWeightMap);
-        this.recoveryFuture = SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
-            Set<T> recoveriedObjects = this.currentWeightMap.entrySet().stream() //
-                    .filter(entry -> entry.getValue() == 0) //
-                    .map(Entry::getKey) //
-                    .filter(checker::test) //
-                    .collect(toSet());
-            recoveriedObjects
-                    .forEach(recoveried -> currentWeightMap.put(recoveried, recoveriedInitWeight));
-        }, failCheckDuration, failCheckDuration, TimeUnit.MILLISECONDS);
+        this.recoveryFuture = SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(
+                () -> {
+                    Set<T> recoveriedObjects = this.currentWeightMap.entrySet().stream() //
+                            .filter(entry -> entry.getValue() == 0) //
+                            .map(Entry::getKey) //
+                            .filter(checker) //
+                            .collect(toSet());
+                    recoveriedObjects.forEach(recoveried -> currentWeightMap.put(recoveried,
+                            recoveriedInitWeight));
+                }, failCheckDuration, failCheckDuration, TimeUnit.MILLISECONDS);
+    }
+
+    public static WeightFailoverBuilder<Object> newBuilder() {
+        return new WeightFailoverBuilder<>();
+    }
+
+    public static <E> GenericWeightFailoverBuilder<E> newGenericBuilder() {
+        return new GenericWeightFailoverBuilder<>(newBuilder());
     }
 
     /* (non-Javadoc)
@@ -74,17 +83,11 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         }
     }
 
-    /* (non-Javadoc)
-     * @see com.github.phantomthief.failover.Failover#getAll()
-     */
     @Override
     public List<T> getAll() {
         return initWeightMap.keySet().stream().collect(toList());
     }
 
-    /* (non-Javadoc)
-     * @see com.github.phantomthief.failover.Failover#fail(java.lang.Object)
-     */
     @Override
     public void fail(T object) {
         currentWeightMap.compute(object, (k, oldValue) -> {
@@ -96,9 +99,6 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         });
     }
 
-    /* (non-Javadoc)
-     * @see com.github.phantomthief.failover.Failover#getAvailable()
-     */
     @Override
     public List<T> getAvailable() {
         return getAvailable(Integer.MAX_VALUE);
@@ -145,22 +145,11 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         });
     }
 
-    /* (non-Javadoc)
-     * @see com.github.phantomthief.failover.Failover#getFailed()
-     */
     @Override
     public Set<T> getFailed() {
         return currentWeightMap.entrySet().stream() //
                 .filter(entry -> entry.getValue() == 0) //
                 .collect(mapping(Entry::getKey, toSet()));
-    }
-
-    public static WeightFailoverBuilder<Object> newBuilder() {
-        return new WeightFailoverBuilder<>();
-    }
-
-    public static <E> GenericWeightFailoverBuilder<E> newGenericBuilder() {
-        return new GenericWeightFailoverBuilder<>(newBuilder());
     }
 
     @Override

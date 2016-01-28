@@ -16,24 +16,24 @@ public class SharedCheckExecutorHolder {
 
     private static final int THREAD_COUNT = 10;
 
+    public static ScheduledExecutorService getInstance() {
+        return LazyHolder.INSTANCE;
+    }
+
     private static class LazyHolder {
 
         private static final ScheduledExecutorService INSTANCE = new ScheduledThreadPoolExecutor(
-                THREAD_COUNT,
-                new ThreadFactoryBuilder().setNameFormat("scheduled-failover-recovery-check-%d")
+                THREAD_COUNT, new ThreadFactoryBuilder()
+                        .setNameFormat("scheduled-failover-recovery-check-%d")
                         .setPriority(Thread.MIN_PRIORITY).setDaemon(true).build()) {
 
             public void shutdown() {
                 throw new UnsupportedOperationException();
-            };
+            }
 
             public List<Runnable> shutdownNow() {
                 throw new UnsupportedOperationException();
-            };
+            }
         };
-    }
-
-    public static ScheduledExecutorService getInstance() {
-        return LazyHolder.INSTANCE;
     }
 }

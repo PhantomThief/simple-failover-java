@@ -34,7 +34,7 @@ import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
  * 
  * @author w.vela
  */
-class WeightFailover<T> implements Failover<T>, Closeable {
+public class WeightFailover<T> implements Failover<T>, Closeable {
 
     static org.slf4j.Logger logger = getLogger(WeightFailover.class);
 

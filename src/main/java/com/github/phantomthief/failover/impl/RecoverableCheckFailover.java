@@ -30,7 +30,7 @@ import org.slf4j.Logger;
  * 
  * @author w.vela
  */
-class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
+public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
     private static Logger logger = getLogger(RecoverableCheckFailover.class);
     private final List<T> original;

@@ -3,6 +3,8 @@
  */
 package com.github.phantomthief.failover.util;
 
+import static com.github.phantomthief.stats.n.counter.SimpleCounter.stats;
+import static com.google.common.base.Stopwatch.createStarted;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
@@ -15,6 +17,8 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Consumer;
 import java.util.function.Function;
+
+import org.slf4j.Logger;
 
 import com.github.phantomthief.stats.n.DurationStats;
 import com.github.phantomthief.stats.n.counter.SimpleCounter;
@@ -31,7 +35,7 @@ public class LatencyAware<T> {
 
     private static final long DEFAULT_INIT_LATENCY = 1;
     private static final long DEFAULT_EVALUTION_DURATION = SECONDS.toMillis(10);
-    private static org.slf4j.Logger logger = getLogger(LatencyAware.class);
+    private static Logger logger = getLogger(LatencyAware.class);
     private final long initLatency;
     private final long evalutionDuration;
     private final LoadingCache<T, DurationStats<SimpleCounter>> costMap = CacheBuilder.newBuilder() //
@@ -52,6 +56,7 @@ public class LatencyAware<T> {
                             .build();
                 }
             });
+
     private LatencyAware(long initLatency, long evalutionDuration) {
         this.initLatency = initLatency;
         this.evalutionDuration = evalutionDuration;
@@ -96,7 +101,7 @@ public class LatencyAware<T> {
         if (cost < 0) {
             return;
         }
-        costMap.getUnchecked(obj).stat(SimpleCounter.stats(cost));
+        costMap.getUnchecked(obj).stat(stats(cost));
     }
 
     public void run(Collection<T> candidates, Consumer<T> function) {
@@ -111,7 +116,7 @@ public class LatencyAware<T> {
         if (obj == null) {
             throw new RuntimeException("no available resources.");
         }
-        Stopwatch stopwatch = Stopwatch.createStarted();
+        Stopwatch stopwatch = createStarted();
         try {
             return function.apply(obj);
         } finally {

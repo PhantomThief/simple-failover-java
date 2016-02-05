@@ -3,14 +3,14 @@
  */
 package com.github.phantomthief.failover.util;
 
+import static com.google.common.collect.Range.closedOpen;
+import static com.google.common.collect.TreeRangeMap.create;
+import static org.apache.commons.lang3.RandomUtils.nextLong;
+
 import java.util.HashMap;
 import java.util.Map;
 
-import org.apache.commons.lang3.RandomUtils;
-
-import com.google.common.collect.Range;
 import com.google.common.collect.RangeMap;
-import com.google.common.collect.TreeRangeMap;
 
 /**
  * 带权重的树
@@ -21,16 +21,14 @@ import com.google.common.collect.TreeRangeMap;
 public class Weight<T> {
 
     private final Map<T, Long> weightMap = new HashMap<>();
-    private final RangeMap<Long, T> nodes = TreeRangeMap.create();
+    private final RangeMap<Long, T> nodes = create();
     private long maxWeight = 0;
-    private int size;
 
     public Weight<T> add(T node, long weight) {
         if (weight > 0) {
             weightMap.put(node, weight);
-            nodes.put(Range.closedOpen(maxWeight, maxWeight + weight), node);
+            nodes.put(closedOpen(maxWeight, maxWeight + weight), node);
             maxWeight += weight;
-            size++;
         }
         return this;
     }
@@ -39,7 +37,7 @@ public class Weight<T> {
         if (isEmpty()) {
             return null;
         }
-        long resultIndex = RandomUtils.nextLong(0, maxWeight);
+        long resultIndex = nextLong(0, maxWeight);
         return nodes.get(resultIndex);
     }
 

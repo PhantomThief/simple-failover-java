@@ -20,30 +20,6 @@ public class SimplePortChecker {
 
     private static org.slf4j.Logger logger = getLogger(SimplePortChecker.class);
 
-    @Deprecated
-    private final int connectTimeout;
-
-    @Deprecated
-    private SimplePortChecker(int connectTimeout) {
-        this.connectTimeout = connectTimeout;
-    }
-
-    /**
-     * better use static method {@code #check(String, int, int)}
-     */
-    @Deprecated
-    public static SimplePortChecker withConnectTimeout(int connectTimeoutInMs) {
-        return new SimplePortChecker(connectTimeoutInMs);
-    }
-
-    /**
-     * better use static method {@code #check(String, int, int)}
-     */
-    @Deprecated
-    public static SimplePortChecker getDefault() {
-        return LazyHolder.INSTANCE;
-    }
-
     public static boolean check(String host, int port) {
         return check(host, port, DEFAULT_CONNECTION_TIMEOUT);
     }
@@ -62,19 +38,5 @@ public class SimplePortChecker {
             logger.warn("[{}:{}] is NOT reachable.", host, port);
             return false;
         }
-    }
-
-    /**
-     * better use static method {@code #check(String, int, int)}
-     */
-    @Deprecated
-    public boolean test(String host, int port) {
-        return SimplePortChecker.check(host, port, connectTimeout);
-    }
-
-    private static class LazyHolder {
-
-        private static final SimplePortChecker INSTANCE = new SimplePortChecker(
-                DEFAULT_CONNECTION_TIMEOUT);
     }
 }

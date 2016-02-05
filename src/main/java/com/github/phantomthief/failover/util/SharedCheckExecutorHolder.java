@@ -3,6 +3,8 @@
  */
 package com.github.phantomthief.failover.util;
 
+import static java.lang.Thread.MIN_PRIORITY;
+
 import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
@@ -25,7 +27,9 @@ public class SharedCheckExecutorHolder {
         private static final ScheduledExecutorService INSTANCE = new ScheduledThreadPoolExecutor(
                 THREAD_COUNT, new ThreadFactoryBuilder()
                         .setNameFormat("scheduled-failover-recovery-check-%d")
-                        .setPriority(Thread.MIN_PRIORITY).setDaemon(true).build()) {
+                        .setPriority(MIN_PRIORITY) //
+                        .setDaemon(true) // 
+                        .build()) {
 
             public void shutdown() {
                 throw new UnsupportedOperationException();

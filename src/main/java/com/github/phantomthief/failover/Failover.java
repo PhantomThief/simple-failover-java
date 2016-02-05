@@ -3,11 +3,12 @@
  */
 package com.github.phantomthief.failover;
 
+import static com.github.phantomthief.failover.util.RandomListUtils.getRandom;
+
 import java.util.List;
 import java.util.Set;
 
 import com.github.phantomthief.failover.util.FailoverUtils;
-import com.github.phantomthief.failover.util.RandomListUtils;
 import com.github.phantomthief.util.ThrowableConsumer;
 import com.github.phantomthief.util.ThrowableFunction;
 
@@ -32,11 +33,11 @@ public interface Failover<T> {
     Set<T> getFailed();
 
     default T getOneAvailable() {
-        return RandomListUtils.getRandom(getAvailable());
+        return getRandom(getAvailable());
     }
 
     default List<T> getAvailable(int n) {
-        return RandomListUtils.getRandom(getAvailable(), n);
+        return getRandom(getAvailable(), n);
     }
 
     default <X extends Throwable> void call(ThrowableConsumer<T, Throwable> func) {

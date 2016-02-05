@@ -4,6 +4,7 @@
 package com.github.phantomthief.failover.impl;
 
 import static com.github.phantomthief.failover.util.SharedCheckExecutorHolder.getInstance;
+import static com.google.common.collect.EvictingQueue.create;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
@@ -16,12 +17,13 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.ScheduledFuture;
 import java.util.function.Predicate;
 
+import org.slf4j.Logger;
+
 import com.github.phantomthief.failover.Failover;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 import com.google.common.collect.EvictingQueue;
-import org.slf4j.Logger;
 
 /**
  * 一个简易的failover/failback策略类
@@ -50,7 +52,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
                     @Override
                     public EvictingQueue<Long> load(T key) throws Exception {
-                        return EvictingQueue.create(failCount);
+                        return create(failCount);
                     }
                 });
         recoveryFuture = getInstance().scheduleWithFixedDelay(() -> {

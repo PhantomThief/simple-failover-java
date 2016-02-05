@@ -3,9 +3,13 @@
  */
 package com.github.phantomthief.failover.impl;
 
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static org.apache.commons.lang3.RandomUtils.nextInt;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.Closeable;
@@ -19,10 +23,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
-
-import org.apache.commons.lang3.RandomUtils;
 
 import com.github.phantomthief.failover.Failover;
 import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
@@ -60,7 +61,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                             .collect(toSet());
                     recoveriedObjects.forEach(recoveried -> currentWeightMap.put(recoveried,
                             recoveriedInitWeight));
-                }, failCheckDuration, failCheckDuration, TimeUnit.MILLISECONDS);
+                }, failCheckDuration, failCheckDuration, MILLISECONDS);
     }
 
     public static WeightFailoverBuilder<Object> newBuilder() {
@@ -95,7 +96,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 logger.warn("invalid fail obj:{}, it's not in original list.", object);
                 return null;
             }
-            return Math.max(0, oldValue - failReduceWeight);
+            return max(0, oldValue - failReduceWeight);
         });
     }
 
@@ -119,7 +120,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 break;
             }
             int sum = snapshot.values().stream().mapToInt(Integer::intValue).sum();
-            int left = RandomUtils.nextInt(0, sum);
+            int left = nextInt(0, sum);
             Iterator<Entry<T, Integer>> iterator = snapshot.entrySet().iterator();
             while (iterator.hasNext()) {
                 Entry<T, Integer> candidate = iterator.next();
@@ -141,8 +142,8 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 logger.warn("invalid fail obj:{}, it's not in original list.", object);
                 return null;
             }
-            return Math.min(initWeightMap.get(k), oldValue + successIncreaceWeight);
-        });
+            return min(initWeightMap.get(k), oldValue + successIncreaceWeight);
+        })
     }
 
     @Override

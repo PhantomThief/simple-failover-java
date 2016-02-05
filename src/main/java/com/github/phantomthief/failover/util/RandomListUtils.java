@@ -3,8 +3,11 @@
  */
 package com.github.phantomthief.failover.util;
 
+import static java.lang.Math.*;
+import static java.util.Collections.emptyList;
+import static java.util.Collections.shuffle;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -28,10 +31,10 @@ public class RandomListUtils {
 
     public static <T> List<T> getRandom(List<T> source, int size) {
         if (source == null || source.isEmpty()) {
-            return Collections.emptyList();
+            return emptyList();
         }
         List<T> newList = new ArrayList<>(source);
-        Collections.shuffle(newList, RANDOM);
-        return newList.subList(0, Math.min(newList.size(), size));
+        shuffle(newList, RANDOM);
+        return newList.subList(0, min(newList.size(), size));
     }
 }

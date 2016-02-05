@@ -3,13 +3,14 @@
  */
 package com.github.phantomthief.failover.util;
 
+import static com.google.common.base.Throwables.propagate;
+
 import java.util.function.Predicate;
 
 import com.github.phantomthief.failover.Failover;
 import com.github.phantomthief.failover.exception.NoAvailableResourceException;
 import com.github.phantomthief.util.ThrowableConsumer;
 import com.github.phantomthief.util.ThrowableFunction;
-import com.google.common.base.Throwables;
 
 /**
  * @author w.vela
@@ -34,7 +35,7 @@ public class FailoverUtils {
                 } else {
                     failover.success(oneAvailable);
                 }
-                throw Throwables.propagate(e);
+                throw propagate(e);
             }
         } else {
             throw new NoAvailableResourceException();
@@ -54,7 +55,7 @@ public class FailoverUtils {
                 } else {
                     failover.success(oneAvailable);
                 }
-                throw Throwables.propagate(e);
+                throw propagate(e);
             }
         } else {
             throw new NoAvailableResourceException();

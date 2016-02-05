@@ -143,7 +143,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 return null;
             }
             return min(initWeightMap.get(k), oldValue + successIncreaceWeight);
-        })
+        });
     }
 
     @Override

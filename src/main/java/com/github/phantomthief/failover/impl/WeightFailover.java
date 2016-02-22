@@ -3,6 +3,7 @@
  */
 package com.github.phantomthief.failover.impl;
 
+import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -102,7 +103,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public List<T> getAvailable() {
-        return getAvailable(Integer.MAX_VALUE);
+        return getAvailable(MAX_VALUE);
     }
 
     @Override
@@ -114,7 +115,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     @Override
     public List<T> getAvailable(int n) {
         Map<T, Integer> snapshot = new HashMap<>(currentWeightMap);
-        List<T> result = new ArrayList<>(n);
+        List<T> result = new ArrayList<>();
         for (int i = 0; i < n; i++) {
             if (snapshot.isEmpty()) {
                 break;

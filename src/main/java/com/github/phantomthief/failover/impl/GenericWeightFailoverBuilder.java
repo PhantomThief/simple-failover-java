@@ -44,14 +44,12 @@ public class GenericWeightFailoverBuilder<E> {
         return this;
     }
 
-    public GenericWeightFailoverBuilder<E> build(Collection<? extends E> original) {
-        builder.build(original);
-        return this;
+    public WeightFailover<E> build(Collection<? extends E> original) {
+        return builder.build(original);
     }
 
-    public GenericWeightFailoverBuilder<E> build(Collection<? extends E> original, int initWeight) {
-        builder.build(original, initWeight);
-        return this;
+    public WeightFailover<E> build(Collection<? extends E> original, int initWeight) {
+        return builder.build(original, initWeight);
     }
 
     public WeightFailover<E> build(Map<? extends E, Integer> original) {

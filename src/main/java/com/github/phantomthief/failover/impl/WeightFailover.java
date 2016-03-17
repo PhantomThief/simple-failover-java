@@ -3,6 +3,7 @@
  */
 package com.github.phantomthief.failover.impl;
 
+import static com.github.phantomthief.util.MoreSuppliers.lazy;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -28,6 +29,7 @@ import java.util.function.Predicate;
 
 import com.github.phantomthief.failover.Failover;
 import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
+import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
 
 /**
  * 默认权重记录
@@ -45,7 +47,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     private final ConcurrentMap<T, Integer> initWeightMap;
     private final ConcurrentMap<T, Integer> currentWeightMap;
-    private final ScheduledFuture<?> recoveryFuture;
+    private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
 
     WeightFailover(int failReduceWeight, int successIncreaceWeight, int recoveriedInitWeight,
             Map<T, Integer> initWeightMap, long failCheckDuration, Predicate<T> checker) {
@@ -53,16 +55,17 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         this.successIncreaceWeight = successIncreaceWeight;
         this.initWeightMap = new ConcurrentHashMap<>(initWeightMap);
         this.currentWeightMap = new ConcurrentHashMap<>(initWeightMap);
-        this.recoveryFuture = SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(
-                () -> {
-                    Set<T> recoveriedObjects = this.currentWeightMap.entrySet().stream() //
-                            .filter(entry -> entry.getValue() == 0) //
-                            .map(Entry::getKey) //
-                            .filter(checker) //
-                            .collect(toSet());
-                    recoveriedObjects.forEach(recoveried -> currentWeightMap.put(recoveried,
-                            recoveriedInitWeight));
-                }, failCheckDuration, failCheckDuration, MILLISECONDS);
+        this.recoveryFuture = lazy(() -> SharedCheckExecutorHolder.getInstance()
+                .scheduleWithFixedDelay(
+                        () -> {
+                            Set<T> recoveriedObjects = this.currentWeightMap.entrySet().stream() //
+                                    .filter(entry -> entry.getValue() == 0) //
+                                    .map(Entry::getKey) //
+                                    .filter(checker) //
+                                    .collect(toSet());
+                            recoveriedObjects.forEach(recoveried -> currentWeightMap.put(
+                                    recoveried, recoveriedInitWeight));
+                        }, failCheckDuration, failCheckDuration, MILLISECONDS));
     }
 
     public static WeightFailoverBuilder<Object> newBuilder() {
@@ -73,16 +76,15 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         return new GenericWeightFailoverBuilder<>(newBuilder());
     }
 
-    /* (non-Javadoc)
-     * @see java.io.Closeable#close()
-     */
     @Override
     public synchronized void close() {
-        if (!recoveryFuture.isCancelled()) {
-            if (!recoveryFuture.cancel(true)) {
-                logger.warn("fail to close failover:{}", this);
+        recoveryFuture.ifPresent(future -> {
+            if (!future.isCancelled()) {
+                if (!future.cancel(true)) {
+                    logger.warn("fail to close failover:{}", this);
+                }
             }
-        }
+        });
     }
 
     @Override
@@ -92,6 +94,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public void fail(T object) {
+        recoveryFuture.get();
         currentWeightMap.compute(object, (k, oldValue) -> {
             if (oldValue == null) {
                 logger.warn("invalid fail obj:{}, it's not in original list.", object);

@@ -4,6 +4,7 @@
 package com.github.phantomthief.failover.impl;
 
 import static com.github.phantomthief.failover.util.SharedCheckExecutorHolder.getInstance;
+import static com.github.phantomthief.util.MoreSuppliers.lazy;
 import static com.google.common.collect.EvictingQueue.create;
 import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -20,6 +21,7 @@ import java.util.function.Predicate;
 import org.slf4j.Logger;
 
 import com.github.phantomthief.failover.Failover;
+import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -40,7 +42,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
     private final Set<T> failedList = new CopyOnWriteArraySet<>();
     private final LoadingCache<T, EvictingQueue<Long>> failCountMap;
     private final boolean returnOriginalWhileAllFailed;
-    private final ScheduledFuture<?> recoveryFuture;
+    private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
 
     RecoverableCheckFailover(List<T> original, Predicate<T> checker, int failCount,
             long failDuration, long recoveryCheckDuration, boolean returnOriginalWhileAllFailed) {
@@ -55,7 +57,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                         return create(failCount);
                     }
                 });
-        recoveryFuture = getInstance().scheduleWithFixedDelay(() -> {
+        recoveryFuture = lazy(() -> getInstance().scheduleWithFixedDelay(() -> {
             if (failedList == null || failedList.isEmpty()) {
                 return;
             }
@@ -69,7 +71,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             } catch (Throwable e) {
                 logger.error("Ops.", e);
             }
-        }, recoveryCheckDuration, recoveryCheckDuration, MILLISECONDS);
+        }, recoveryCheckDuration, recoveryCheckDuration, MILLISECONDS));
     }
 
     public static RecoverableCheckFailoverBuilder<Object> newBuilder() {
@@ -86,6 +88,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             logger.warn("invalid fail obj:{}, it's not in original list.", object);
             return;
         }
+        recoveryFuture.get();
         logger.warn("server {} failed.", object);
         boolean addToFail = false;
         EvictingQueue<Long> evictingQueue = failCountMap.getUnchecked(object);
@@ -126,11 +129,13 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
     }
 
     public synchronized void close() {
-        if (!recoveryFuture.isCancelled()) {
-            if (!recoveryFuture.cancel(true)) {
-                logger.warn("fail to close failover:{}", this);
+        recoveryFuture.ifPresent(future -> {
+            if (!future.isCancelled()) {
+                if (!future.cancel(true)) {
+                    logger.warn("fail to close failover:{}", this);
+                }
             }
-        }
+        });
     }
 
     @Override

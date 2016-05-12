@@ -55,17 +55,16 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         this.successIncreaceWeight = successIncreaceWeight;
         this.initWeightMap = new ConcurrentHashMap<>(initWeightMap);
         this.currentWeightMap = new ConcurrentHashMap<>(initWeightMap);
-        this.recoveryFuture = lazy(() -> SharedCheckExecutorHolder.getInstance()
-                .scheduleWithFixedDelay(
-                        () -> {
-                            Set<T> recoveriedObjects = this.currentWeightMap.entrySet().stream() //
-                                    .filter(entry -> entry.getValue() == 0) //
-                                    .map(Entry::getKey) //
-                                    .filter(checker) //
-                                    .collect(toSet());
-                            recoveriedObjects.forEach(recoveried -> currentWeightMap.put(
-                                    recoveried, recoveriedInitWeight));
-                        }, failCheckDuration, failCheckDuration, MILLISECONDS));
+        this.recoveryFuture = lazy(
+                () -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
+                    Set<T> recoveriedObjects = this.currentWeightMap.entrySet().stream() //
+                            .filter(entry -> entry.getValue() == 0) //
+                            .map(Entry::getKey) //
+                            .filter(checker) //
+                            .collect(toSet());
+                    recoveriedObjects.forEach(
+                            recoveried -> currentWeightMap.put(recoveried, recoveriedInitWeight));
+                }, failCheckDuration, failCheckDuration, MILLISECONDS));
     }
 
     public static WeightFailoverBuilder<Object> newBuilder() {

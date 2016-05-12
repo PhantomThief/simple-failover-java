@@ -49,8 +49,8 @@ public final class RecoverableCheckFailoverBuilder<T> {
         return this;
     }
 
-    public RecoverableCheckFailoverBuilder<T> setReturnOriginalWhileAllFailed(
-            boolean returnOriginalWhileAllFailed) {
+    public RecoverableCheckFailoverBuilder<T>
+            setReturnOriginalWhileAllFailed(boolean returnOriginalWhileAllFailed) {
         this.returnOriginalWhileAllFailed = returnOriginalWhileAllFailed;
         return this;
     }

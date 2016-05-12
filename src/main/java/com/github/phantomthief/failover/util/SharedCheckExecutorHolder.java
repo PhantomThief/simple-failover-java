@@ -25,8 +25,8 @@ public class SharedCheckExecutorHolder {
     private static class LazyHolder {
 
         private static final ScheduledExecutorService INSTANCE = new ScheduledThreadPoolExecutor(
-                THREAD_COUNT, new ThreadFactoryBuilder()
-                        .setNameFormat("scheduled-failover-recovery-check-%d")
+                THREAD_COUNT,
+                new ThreadFactoryBuilder().setNameFormat("scheduled-failover-recovery-check-%d")
                         .setPriority(MIN_PRIORITY) //
                         .setDaemon(true) // 
                         .build()) {

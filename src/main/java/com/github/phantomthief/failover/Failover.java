@@ -20,7 +20,7 @@ public interface Failover<T> {
     List<T> getAll();
 
     default void success(T object) {
-        // default behavor: do nothing
+        // default behavior: do nothing
     }
 
     void fail(T object);

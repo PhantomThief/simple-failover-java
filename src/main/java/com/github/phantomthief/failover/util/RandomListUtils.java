@@ -3,7 +3,7 @@
  */
 package com.github.phantomthief.failover.util;
 
-import static java.lang.Math.*;
+import static java.lang.Math.min;
 import static java.util.Collections.emptyList;
 import static java.util.Collections.shuffle;
 

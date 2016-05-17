@@ -43,27 +43,27 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     static org.slf4j.Logger logger = getLogger(WeightFailover.class);
 
     private final int failReduceWeight;
-    private final int successIncreaceWeight;
+    private final int successIncreaseWeight;
 
     private final ConcurrentMap<T, Integer> initWeightMap;
     private final ConcurrentMap<T, Integer> currentWeightMap;
     private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
 
-    WeightFailover(int failReduceWeight, int successIncreaceWeight, int recoveriedInitWeight,
+    WeightFailover(int failReduceWeight, int successIncreaseWeight, int recoveredInitWeight,
             Map<T, Integer> initWeightMap, long failCheckDuration, Predicate<T> checker) {
         this.failReduceWeight = failReduceWeight;
-        this.successIncreaceWeight = successIncreaceWeight;
+        this.successIncreaseWeight = successIncreaseWeight;
         this.initWeightMap = new ConcurrentHashMap<>(initWeightMap);
         this.currentWeightMap = new ConcurrentHashMap<>(initWeightMap);
         this.recoveryFuture = lazy(
                 () -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
-                    Set<T> recoveriedObjects = this.currentWeightMap.entrySet().stream() //
+                    Set<T> recoveredObjects = this.currentWeightMap.entrySet().stream() //
                             .filter(entry -> entry.getValue() == 0) //
                             .map(Entry::getKey) //
                             .filter(checker) //
                             .collect(toSet());
-                    recoveriedObjects.forEach(
-                            recoveried -> currentWeightMap.put(recoveried, recoveriedInitWeight));
+                    recoveredObjects.forEach(
+                            recovered -> currentWeightMap.put(recovered, recoveredInitWeight));
                 }, failCheckDuration, failCheckDuration, MILLISECONDS));
     }
 
@@ -145,7 +145,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 logger.warn("invalid fail obj:{}, it's not in original list.", object);
                 return null;
             }
-            return min(initWeightMap.get(k), oldValue + successIncreaceWeight);
+            return min(initWeightMap.get(k), oldValue + successIncreaseWeight);
         });
     }
 

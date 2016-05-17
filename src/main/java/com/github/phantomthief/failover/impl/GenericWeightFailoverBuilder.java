@@ -29,8 +29,8 @@ public class GenericWeightFailoverBuilder<E> {
         return this;
     }
 
-    public GenericWeightFailoverBuilder<E> recoveiedInit(int weight) {
-        builder.recoveiedInit(weight);
+    public GenericWeightFailoverBuilder<E> recoveredInit(int weight) {
+        builder.recoveredInit(weight);
         return this;
     }
 

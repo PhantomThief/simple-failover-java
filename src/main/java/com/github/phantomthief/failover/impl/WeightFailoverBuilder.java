@@ -19,12 +19,12 @@ public final class WeightFailoverBuilder<T> {
     private static final int DEFAULT_INIT_WEIGHT = 100;
     private static final int DEFAULT_FAIL_REDUCE_WEIGHT = 5;
     private static final int DEFAULT_SUCCESS_INCREASE_WEIGHT = 1;
-    private static final int DEFAULT_RECOVERIED_INIT_WEIGHT = 1;
+    private static final int DEFAULT_RECOVERED_INIT_WEIGHT = 1;
     private static final long DEFAULT_CHECK_DURATION = SECONDS.toMillis(5);
 
     private int failReduceWeight;
-    private int successIncreaceWeight;
-    private int recoveriedInitWeight;
+    private int successIncreaseWeight;
+    private int recoveredInitWeight;
     private Map<T, Integer> initWeightMap;
     private Predicate<T> checker;
     private long checkDuration;
@@ -37,13 +37,13 @@ public final class WeightFailoverBuilder<T> {
 
     public WeightFailoverBuilder<T> successIncrease(int weight) {
         checkArgument(weight > 0);
-        successIncreaceWeight = weight;
+        successIncreaseWeight = weight;
         return this;
     }
 
-    public WeightFailoverBuilder<T> recoveiedInit(int weight) {
+    public WeightFailoverBuilder<T> recoveredInit(int weight) {
         checkArgument(weight > 0);
-        recoveriedInitWeight = weight;
+        recoveredInitWeight = weight;
         return this;
     }
 
@@ -89,7 +89,7 @@ public final class WeightFailoverBuilder<T> {
 
     private WeightFailover<T> build() {
         ensure();
-        return new WeightFailover<>(failReduceWeight, successIncreaceWeight, recoveriedInitWeight,
+        return new WeightFailover<>(failReduceWeight, successIncreaseWeight, recoveredInitWeight,
                 initWeightMap, checkDuration, checker);
     }
 
@@ -98,11 +98,11 @@ public final class WeightFailoverBuilder<T> {
         if (failReduceWeight == 0) {
             failReduceWeight = DEFAULT_FAIL_REDUCE_WEIGHT;
         }
-        if (successIncreaceWeight == 0) {
-            successIncreaceWeight = DEFAULT_SUCCESS_INCREASE_WEIGHT;
+        if (successIncreaseWeight == 0) {
+            successIncreaseWeight = DEFAULT_SUCCESS_INCREASE_WEIGHT;
         }
-        if (recoveriedInitWeight == 0) {
-            recoveriedInitWeight = DEFAULT_RECOVERIED_INIT_WEIGHT;
+        if (recoveredInitWeight == 0) {
+            recoveredInitWeight = DEFAULT_RECOVERED_INIT_WEIGHT;
         }
         if (checkDuration == 0) {
             checkDuration = DEFAULT_CHECK_DURATION;

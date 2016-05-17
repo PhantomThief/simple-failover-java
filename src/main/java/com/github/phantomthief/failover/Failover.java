@@ -40,11 +40,11 @@ public interface Failover<T> {
         return getRandom(getAvailable(), n);
     }
 
-    default <X extends Throwable> void call(ThrowableConsumer<T, Throwable> func) {
+    default <X extends Throwable> void call(ThrowableConsumer<T, X> func) {
         FailoverUtils.call(this, func, null);
     }
 
-    default <R, X extends Throwable> R run(ThrowableFunction<T, R, Throwable> func) {
+    default <R, X extends Throwable> R run(ThrowableFunction<T, R, X> func) {
         return FailoverUtils.run(this, func, null);
     }
 }

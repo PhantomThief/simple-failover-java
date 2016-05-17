@@ -1,5 +1,5 @@
 /**
- * 
+ QQ2ConnectInvoker *
  */
 package com.github.phantomthief.failover.impl;
 
@@ -7,6 +7,7 @@ import static com.github.phantomthief.util.MoreSuppliers.lazy;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
+import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
@@ -16,6 +17,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.Closeable;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -27,6 +29,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.function.Predicate;
 
+import org.slf4j.Logger;
+
 import com.github.phantomthief.failover.Failover;
 import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
 import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
@@ -35,12 +39,12 @@ import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
  * 默认权重记录
  * fail时权重下降
  * success时权重恢复
- * 
+ *
  * @author w.vela
  */
 public class WeightFailover<T> implements Failover<T>, Closeable {
 
-    static org.slf4j.Logger logger = getLogger(WeightFailover.class);
+    static Logger logger = getLogger(WeightFailover.class);
 
     private final int failReduceWeight;
     private final int successIncreaseWeight;
@@ -115,7 +119,16 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     }
 
     @Override
+    public List<T> getAvailableExclude(Collection<T> exclusions) {
+        return getAvailable(MAX_VALUE, exclusions);
+    }
+
+    @Override
     public List<T> getAvailable(int n) {
+        return getAvailable(n, emptySet());
+    }
+
+    private List<T> getAvailable(int n, Collection<T> exclusions) {
         Map<T, Integer> snapshot = new HashMap<>(currentWeightMap);
         List<T> result = new ArrayList<>();
         for (int i = 0; i < n; i++) {
@@ -128,7 +141,10 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             while (iterator.hasNext()) {
                 Entry<T, Integer> candidate = iterator.next();
                 if (left < candidate.getValue()) {
-                    result.add(candidate.getKey());
+                    T obj = candidate.getKey();
+                    if (!exclusions.contains(obj)) {
+                        result.add(obj);
+                    }
                     iterator.remove();
                     break;
                 }

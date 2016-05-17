@@ -7,11 +7,13 @@ import static com.github.phantomthief.failover.util.SharedCheckExecutorHolder.ge
 import static com.github.phantomthief.util.MoreSuppliers.lazy;
 import static com.google.common.collect.EvictingQueue.create;
 import static java.lang.System.currentTimeMillis;
+import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.Closeable;
+import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -109,9 +111,16 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public List<T> getAvailable() {
-        List<T> availables = original.stream().filter(obj -> !getFailed().contains(obj))
+        return getAvailableExclude(emptySet());
+    }
+
+    @Override
+    public List<T> getAvailableExclude(Collection<T> exclusions) {
+        List<T> availables = original.stream()
+                .filter(obj -> !getFailed().contains(obj))
+                .filter(obj -> !exclusions.contains(obj))
                 .collect(toList());
-        if ((availables == null || availables.isEmpty()) && returnOriginalWhileAllFailed) {
+        if (availables.isEmpty() && returnOriginalWhileAllFailed) {
             return original;
         } else {
             return availables;

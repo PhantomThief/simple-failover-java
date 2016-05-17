@@ -15,14 +15,14 @@ import static org.slf4j.LoggerFactory.getLogger;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 
 import com.github.phantomthief.stats.n.DurationStats;
 import com.github.phantomthief.stats.n.counter.SimpleCounter;
 import com.github.phantomthief.stats.n.impl.SimpleDurationStats;
+import com.github.phantomthief.util.ThrowableConsumer;
+import com.github.phantomthief.util.ThrowableFunction;
 import com.google.common.base.Stopwatch;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
@@ -71,6 +71,10 @@ public class LatencyAware<T> {
         return new LatencyAware<>(DEFAULT_INIT_LATENCY, DEFAULT_EVALUATION_DURATION);
     }
 
+    public static <T> LatencyAware<T> withEvaluationDuration(long durationInMs) {
+        return new LatencyAware<>(DEFAULT_INIT_LATENCY, durationInMs);
+    }
+
     public T get(Collection<T> candidates) {
         if (candidates == null || candidates.isEmpty()) {
             return null;
@@ -102,14 +106,16 @@ public class LatencyAware<T> {
         costMap.getUnchecked(obj).stat(stats(cost));
     }
 
-    public void run(Collection<T> candidates, Consumer<T> function) {
-        run(candidates, t -> {
+    public <X extends Throwable> void run(Collection<T> candidates,
+            ThrowableConsumer<T, X> function) throws X {
+        supply(candidates, t -> {
             function.accept(t);
             return null;
         });
     }
 
-    public <V> V run(Collection<T> candidates, Function<T, V> function) {
+    public <V, X extends Throwable> V supply(Collection<T> candidates,
+            ThrowableFunction<T, V, X> function) throws X {
         T obj = get(candidates);
         if (obj == null) {
             throw new RuntimeException("no available resources.");

@@ -38,6 +38,7 @@ public class LatencyAware<T> {
     private static Logger logger = getLogger(LatencyAware.class);
     private final long initLatency;
     private final long evaluationDuration;
+    private final boolean aggressiveMode;
     private final LoadingCache<T, DurationStats<SimpleCounter>> costMap = CacheBuilder.newBuilder() //
             .weakKeys() //
             .<T, DurationStats<SimpleCounter>> removalListener(notify -> {
@@ -57,9 +58,10 @@ public class LatencyAware<T> {
                 }
             });
 
-    private LatencyAware(long initLatency, long evaluationDuration) {
+    private LatencyAware(long initLatency, long evaluationDuration, boolean aggressiveMode) {
         this.initLatency = initLatency;
         this.evaluationDuration = evaluationDuration;
+        this.aggressiveMode = aggressiveMode;
     }
 
     @SuppressWarnings("unchecked")
@@ -68,11 +70,15 @@ public class LatencyAware<T> {
     }
 
     public static <T> LatencyAware<T> create() {
-        return new LatencyAware<>(DEFAULT_INIT_LATENCY, DEFAULT_EVALUATION_DURATION);
+        return new LatencyAware<>(DEFAULT_INIT_LATENCY, DEFAULT_EVALUATION_DURATION, false);
     }
 
     public static <T> LatencyAware<T> withEvaluationDuration(long durationInMs) {
-        return new LatencyAware<>(DEFAULT_INIT_LATENCY, durationInMs);
+        return new LatencyAware<>(DEFAULT_INIT_LATENCY, durationInMs, false);
+    }
+
+    public static <T> LatencyAware<T> withAggressiveMode(long durationInMs) {
+        return new LatencyAware<>(DEFAULT_INIT_LATENCY, durationInMs, true);
     }
 
     public T get(Collection<T> candidates) {
@@ -82,6 +88,32 @@ public class LatencyAware<T> {
         if (candidates.size() == 1) {
             return candidates.iterator().next();
         }
+        if (aggressiveMode) {
+            return getAggressiveMode(candidates);
+        } else {
+            return getNormalMode(candidates);
+        }
+    }
+
+    private T getAggressiveMode(Collection<T> candidates) {
+        AtomicLong sum = new AtomicLong();
+        Map<T, Long> weightMap = candidates.stream().collect(toMap(identity(), t -> {
+            DurationStats<SimpleCounter> stats = costMap.getUnchecked(t);
+            SimpleCounter counter = stats.getStats().get(evaluationDuration);
+            long result = counter == null ? initLatency : (long) ((double) counter.getCost()
+                    / counter.getCount());
+            if (result == 0) {
+                result = initLatency;
+            }
+            sum.addAndGet(result);
+            return result;
+        }));
+        Weight<T> weight = new Weight<>();
+        weightMap.forEach((k, w) -> weight.add(k, sum.get() / w));
+        return weight.get();
+    }
+
+    private T getNormalMode(Collection<T> candidates) {
         AtomicLong sum = new AtomicLong();
         Map<T, Long> weightMap = candidates.stream().collect(toMap(identity(), t -> {
             DurationStats<SimpleCounter> stats = costMap.getUnchecked(t);
@@ -132,6 +164,6 @@ public class LatencyAware<T> {
     private static class LazyHolder {
 
         private static final LatencyAware<Object> INSTANCE = new LatencyAware<>(
-                DEFAULT_INIT_LATENCY, DEFAULT_EVALUATION_DURATION);
+                DEFAULT_INIT_LATENCY, DEFAULT_EVALUATION_DURATION, false);
     }
 }

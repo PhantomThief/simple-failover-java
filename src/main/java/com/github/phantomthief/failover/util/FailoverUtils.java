@@ -5,14 +5,9 @@ package com.github.phantomthief.failover.util;
 
 import static com.google.common.base.Throwables.propagate;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static java.util.Collections.emptyList;
-import static java.util.Collections.emptySet;
-import static java.util.Collections.singletonList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
 
@@ -99,40 +94,5 @@ public class FailoverUtils {
             func.accept(t);
             return null;
         }, failChecker);
-    }
-
-    public static <T> Failover<T> singleton(Failover<T> parent, T o) {
-        return new Failover<T>() {
-
-            @Override
-            public List<T> getAll() {
-                return singletonList(o);
-            }
-
-            @Override
-            public void fail(T object) {
-                parent.fail(object);
-            }
-
-            @Override
-            public List<T> getAvailable() {
-                List<T> parentAvailable = parent.getAvailable();
-                if (parentAvailable.contains(o)) {
-                    return singletonList(o);
-                } else {
-                    return emptyList();
-                }
-            }
-
-            @Override
-            public Set<T> getFailed() {
-                Set<T> parentFailed = parent.getFailed();
-                if (parentFailed.contains(o)) {
-                    return Collections.singleton(o);
-                } else {
-                    return emptySet();
-                }
-            }
-        };
     }
 }

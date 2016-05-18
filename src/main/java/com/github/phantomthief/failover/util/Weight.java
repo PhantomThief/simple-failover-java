@@ -9,6 +9,7 @@ import static org.apache.commons.lang3.RandomUtils.nextLong;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import com.google.common.collect.RangeMap;
 
@@ -43,6 +44,10 @@ public class Weight<T> {
 
     public boolean isEmpty() {
         return maxWeight == 0;
+    }
+
+    public Set<T> allNodes() {
+        return weightMap.keySet();
     }
 
     @Override

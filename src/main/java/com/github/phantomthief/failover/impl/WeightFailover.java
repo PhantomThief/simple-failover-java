@@ -136,6 +136,9 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 break;
             }
             int sum = snapshot.values().stream().mapToInt(Integer::intValue).sum();
+            if (sum == 0) {
+                break;
+            }
             int left = nextInt(0, sum);
             Iterator<Entry<T, Integer>> iterator = snapshot.entrySet().iterator();
             while (iterator.hasNext()) {

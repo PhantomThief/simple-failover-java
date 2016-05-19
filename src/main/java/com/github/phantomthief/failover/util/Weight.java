@@ -42,6 +42,18 @@ public class Weight<T> {
         return nodes.get(resultIndex);
     }
 
+    public T getWithout(Set<T> exclusions) {
+        if (weightMap.size() == exclusions.size()) {
+            return null;
+        }
+        while (true) {
+            T t = get();
+            if (!exclusions.contains(t)) {
+                return t;
+            }
+        }
+    }
+
     public boolean isEmpty() {
         return maxWeight == 0;
     }

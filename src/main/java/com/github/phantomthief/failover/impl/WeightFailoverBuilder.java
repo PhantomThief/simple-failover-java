@@ -12,6 +12,7 @@ import static java.util.stream.Collectors.toMap;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
 public final class WeightFailoverBuilder<T> {
@@ -22,28 +23,47 @@ public final class WeightFailoverBuilder<T> {
     private static final int DEFAULT_RECOVERED_INIT_WEIGHT = 1;
     private static final long DEFAULT_CHECK_DURATION = SECONDS.toMillis(5);
 
-    private int failReduceWeight;
-    private int successIncreaseWeight;
-    private int recoveredInitWeight;
+    private IntUnaryOperator failReduceWeight;
+    private IntUnaryOperator successIncreaseWeight;
+    private IntUnaryOperator recoveredInitWeight;
+
     private Map<T, Integer> initWeightMap;
     private Predicate<T> checker;
     private long checkDuration;
 
+    public WeightFailoverBuilder<T> failReduceRate(double rate) {
+        checkArgument(rate > 0 && rate <= 1);
+        failReduceWeight = i -> Math.min(1, (int) (rate * i));
+        return this;
+    }
+
     public WeightFailoverBuilder<T> failReduce(int weight) {
         checkArgument(weight > 0);
-        failReduceWeight = weight;
+        failReduceWeight = i -> weight;
+        return this;
+    }
+
+    public WeightFailoverBuilder<T> successIncreaseRate(double rate) {
+        checkArgument(rate > 0 && rate <= 1);
+        successIncreaseWeight = i -> Math.min(1, (int) (rate * i));
         return this;
     }
 
     public WeightFailoverBuilder<T> successIncrease(int weight) {
         checkArgument(weight > 0);
-        successIncreaseWeight = weight;
+        successIncreaseWeight = i -> weight;
+        return this;
+    }
+
+    public WeightFailoverBuilder<T> recoveredInitRate(double rate) {
+        checkArgument(rate > 0 && rate <= 1);
+        recoveredInitWeight = i -> Math.min(1, (int) (rate * i));
         return this;
     }
 
     public WeightFailoverBuilder<T> recoveredInit(int weight) {
         checkArgument(weight > 0);
-        recoveredInitWeight = weight;
+        recoveredInitWeight = i -> weight;
         return this;
     }
 
@@ -95,14 +115,14 @@ public final class WeightFailoverBuilder<T> {
 
     private void ensure() {
         checkNotNull(checker);
-        if (failReduceWeight == 0) {
-            failReduceWeight = DEFAULT_FAIL_REDUCE_WEIGHT;
+        if (failReduceWeight == null) {
+            failReduceWeight = i -> DEFAULT_FAIL_REDUCE_WEIGHT;
         }
-        if (successIncreaseWeight == 0) {
-            successIncreaseWeight = DEFAULT_SUCCESS_INCREASE_WEIGHT;
+        if (successIncreaseWeight == null) {
+            successIncreaseWeight = i -> DEFAULT_SUCCESS_INCREASE_WEIGHT;
         }
-        if (recoveredInitWeight == 0) {
-            recoveredInitWeight = DEFAULT_RECOVERED_INIT_WEIGHT;
+        if (recoveredInitWeight == null) {
+            recoveredInitWeight = i -> DEFAULT_RECOVERED_INIT_WEIGHT;
         }
         if (checkDuration == 0) {
             checkDuration = DEFAULT_CHECK_DURATION;

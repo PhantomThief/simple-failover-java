@@ -1,5 +1,5 @@
 /**
- QQ2ConnectInvoker *
+ *
  */
 package com.github.phantomthief.failover.impl;
 
@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
+import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
 import org.slf4j.Logger;
@@ -46,15 +47,16 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     static Logger logger = getLogger(WeightFailover.class);
 
-    private final int failReduceWeight;
-    private final int successIncreaseWeight;
+    private final IntUnaryOperator failReduceWeight;
+    private final IntUnaryOperator successIncreaseWeight;
 
     private final ConcurrentMap<T, Integer> initWeightMap;
     private final ConcurrentMap<T, Integer> currentWeightMap;
     private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
 
-    WeightFailover(int failReduceWeight, int successIncreaseWeight, int recoveredInitWeight,
-            Map<T, Integer> initWeightMap, long failCheckDuration, Predicate<T> checker) {
+    WeightFailover(IntUnaryOperator failReduceWeight, IntUnaryOperator successIncreaseWeight,
+            IntUnaryOperator recoveredInitWeight, Map<T, Integer> initWeightMap,
+            long failCheckDuration, Predicate<T> checker) {
         this.failReduceWeight = failReduceWeight;
         this.successIncreaseWeight = successIncreaseWeight;
         this.initWeightMap = new ConcurrentHashMap<>(initWeightMap);
@@ -66,8 +68,8 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                             .map(Entry::getKey) //
                             .filter(checker) //
                             .collect(toSet());
-                    recoveredObjects.forEach(
-                            recovered -> currentWeightMap.put(recovered, recoveredInitWeight));
+                    recoveredObjects.forEach(recovered -> currentWeightMap.put(recovered,
+                            recoveredInitWeight.applyAsInt(initWeightMap.get(recovered))));
                 }, failCheckDuration, failCheckDuration, MILLISECONDS));
     }
 
@@ -103,7 +105,8 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 logger.warn("invalid fail obj:{}, it's not in original list.", object);
                 return null;
             }
-            return max(0, oldValue - failReduceWeight);
+            int initWeight = initWeightMap.get(k);
+            return max(0, oldValue - failReduceWeight.applyAsInt(initWeight));
         });
     }
 
@@ -164,7 +167,8 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 logger.warn("invalid fail obj:{}, it's not in original list.", object);
                 return null;
             }
-            return min(initWeightMap.get(k), oldValue + successIncreaseWeight);
+            int initWeight = initWeightMap.get(k);
+            return min(initWeight, oldValue + successIncreaseWeight.applyAsInt(initWeight));
         });
     }
 

@@ -19,13 +19,28 @@ public class GenericWeightFailoverBuilder<E> {
         this.builder = builder;
     }
 
+    public GenericWeightFailoverBuilder<E> failReduceRate(double rate) {
+        builder.failReduceRate(rate);
+        return this;
+    }
+
     public GenericWeightFailoverBuilder<E> failReduce(int weight) {
         builder.failReduce(weight);
         return this;
     }
 
+    public GenericWeightFailoverBuilder<E> successIncreaseRate(double rate) {
+        builder.successIncreaseRate(rate);
+        return this;
+    }
+
     public GenericWeightFailoverBuilder<E> successIncrease(int weight) {
         builder.successIncrease(weight);
+        return this;
+    }
+
+    public GenericWeightFailoverBuilder<E> recoveredInitRate(double rate) {
+        builder.recoveredInitRate(rate);
         return this;
     }
 

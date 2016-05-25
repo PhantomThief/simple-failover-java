@@ -96,7 +96,7 @@ public final class WeightFailoverBuilder<T> {
     public <E> WeightFailover<E> build(Collection<? extends E> original, int initWeight) {
         checkNotNull(original);
         checkArgument(initWeight > 0);
-        return build(original.stream().collect(toMap(identity(), i -> initWeight)));
+        return build(original.stream().collect(toMap(identity(), i -> initWeight, (u, v) -> u)));
     }
 
     @SuppressWarnings("unchecked")

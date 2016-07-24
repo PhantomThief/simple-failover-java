@@ -99,6 +99,10 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public void fail(T object) {
+        if (object == null) {
+            logger.warn("invalid fail call, null object found.");
+            return;
+        }
         recoveryFuture.get();
         currentWeightMap.compute(object, (k, oldValue) -> {
             if (oldValue == null) {

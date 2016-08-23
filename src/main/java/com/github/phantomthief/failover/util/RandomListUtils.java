@@ -8,6 +8,7 @@ import static java.util.Collections.emptyList;
 import static java.util.Collections.shuffle;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 
@@ -29,7 +30,15 @@ public class RandomListUtils {
         return source.get(RANDOM.nextInt(source.size()));
     }
 
+    /**
+     * use {@link #getRandom(Collection, int)}
+     */
+    @Deprecated
     public static <T> List<T> getRandom(List<T> source, int size) {
+        return getRandom((Collection<T>) source, size);
+    }
+
+    public static <T> List<T> getRandom(Collection<T> source, int size) {
         if (source == null || source.isEmpty()) {
             return emptyList();
         }

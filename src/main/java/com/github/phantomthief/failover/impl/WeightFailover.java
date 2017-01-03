@@ -9,7 +9,6 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.apache.commons.lang3.RandomUtils.nextInt;
@@ -45,7 +44,7 @@ import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
  */
 public class WeightFailover<T> implements Failover<T>, Closeable {
 
-    static Logger logger = getLogger(WeightFailover.class);
+    private static final Logger logger = getLogger(WeightFailover.class);
 
     private final IntUnaryOperator failReduceWeight;
     private final IntUnaryOperator successIncreaseWeight;
@@ -53,10 +52,12 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     private final ConcurrentMap<T, Integer> initWeightMap;
     private final ConcurrentMap<T, Integer> currentWeightMap;
     private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
+    private final int minWeight;
 
     WeightFailover(IntUnaryOperator failReduceWeight, IntUnaryOperator successIncreaseWeight,
-            IntUnaryOperator recoveredInitWeight, Map<T, Integer> initWeightMap,
+            IntUnaryOperator recoveredInitWeight, Map<T, Integer> initWeightMap, int minWeight,
             long failCheckDuration, Predicate<T> checker) {
+        this.minWeight = minWeight;
         this.failReduceWeight = failReduceWeight;
         this.successIncreaseWeight = successIncreaseWeight;
         this.initWeightMap = new ConcurrentHashMap<>(initWeightMap);
@@ -110,7 +111,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 return null;
             }
             int initWeight = initWeightMap.get(k);
-            return max(0, oldValue - failReduceWeight.applyAsInt(initWeight));
+            return max(minWeight, oldValue - failReduceWeight.applyAsInt(initWeight));
         });
     }
 
@@ -180,7 +181,8 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     public Set<T> getFailed() {
         return currentWeightMap.entrySet().stream() //
                 .filter(entry -> entry.getValue() == 0) //
-                .collect(mapping(Entry::getKey, toSet()));
+                .map(Entry::getKey) //
+                .collect(toSet());
     }
 
     @Override

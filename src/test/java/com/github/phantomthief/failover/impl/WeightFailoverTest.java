@@ -48,6 +48,31 @@ public class WeightFailoverTest {
         System.out.println(result);
     }
 
+    @Test
+    public void testMinWeight() {
+        List<String> original = Arrays.asList("1", "2", "3");
+        Failover<String> failover = WeightFailover.newBuilder() //
+                .checker(this::check) //
+                .minWeight(1) //
+                .build(original);
+        Multiset<String> result = HashMultiset.create();
+        Multiset<Integer> getCount = HashMultiset.create();
+        for (int i = 0; i < 500; i++) {
+            List<String> available = failover.getAvailable(2);
+            assertTrue(available.size() == 2);
+            getCount.add(available.size());
+            available.forEach(obj -> {
+                assertNotNull(obj);
+                if (doSomething(obj, failover)) {
+                    result.add(obj);
+                }
+            });
+            sleepUninterruptibly(10, MILLISECONDS);
+        }
+        System.out.println(getCount);
+        System.out.println(result);
+    }
+
     private boolean check(String test) {
         System.out.println("test:" + test);
         return true;

@@ -8,6 +8,7 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import java.util.Collection;
 import java.util.Map;
@@ -15,7 +16,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
+import org.slf4j.Logger;
+
 public final class WeightFailoverBuilder<T> {
+
+    private static final Logger logger = getLogger(WeightFailoverBuilder.class);
 
     private static final int DEFAULT_INIT_WEIGHT = 100;
     private static final int DEFAULT_FAIL_REDUCE_WEIGHT = 5;
@@ -30,6 +35,13 @@ public final class WeightFailoverBuilder<T> {
     private Map<T, Integer> initWeightMap;
     private Predicate<T> checker;
     private long checkDuration;
+    private int minWeight = 0;
+
+    public WeightFailoverBuilder<T> minWeight(int value) {
+        checkArgument(value >= 0);
+        this.minWeight = value;
+        return this;
+    }
 
     public WeightFailoverBuilder<T> failReduceRate(double rate) {
         checkArgument(rate > 0 && rate <= 1);
@@ -82,7 +94,7 @@ public final class WeightFailoverBuilder<T> {
             try {
                 return failChecker.test(t);
             } catch (Throwable e) {
-                WeightFailover.logger.error("Ops.", e);
+                logger.error("", e);
                 return false;
             }
         };
@@ -110,7 +122,7 @@ public final class WeightFailoverBuilder<T> {
     private WeightFailover<T> build() {
         ensure();
         return new WeightFailover<>(failReduceWeight, successIncreaseWeight, recoveredInitWeight,
-                initWeightMap, checkDuration, checker);
+                initWeightMap, minWeight, checkDuration, checker);
     }
 
     private void ensure() {

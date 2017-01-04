@@ -49,6 +49,11 @@ public class GenericWeightFailoverBuilder<E> {
         return this;
     }
 
+    public GenericWeightFailoverBuilder<E> minWeight(int weight) {
+        builder.minWeight(weight);
+        return this;
+    }
+
     public GenericWeightFailoverBuilder<E> checkDuration(long time, TimeUnit unit) {
         builder.checkDuration(time, unit);
         return this;

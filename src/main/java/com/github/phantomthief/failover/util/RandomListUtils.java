@@ -10,14 +10,12 @@ import static java.util.Collections.shuffle;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * @author w.vela
  */
 public class RandomListUtils {
-
-    private static final Random RANDOM = new Random();
 
     private RandomListUtils() {
         throw new UnsupportedOperationException();
@@ -27,7 +25,7 @@ public class RandomListUtils {
         if (source == null || source.isEmpty()) {
             return null;
         }
-        return source.get(RANDOM.nextInt(source.size()));
+        return source.get(ThreadLocalRandom.current().nextInt(source.size()));
     }
 
     public static <T> List<T> getRandom(Collection<T> source, int size) {
@@ -35,7 +33,7 @@ public class RandomListUtils {
             return emptyList();
         }
         List<T> newList = new ArrayList<>(source);
-        shuffle(newList, RANDOM);
+        shuffle(newList, ThreadLocalRandom.current());
         return newList.subList(0, min(newList.size(), size));
     }
 }

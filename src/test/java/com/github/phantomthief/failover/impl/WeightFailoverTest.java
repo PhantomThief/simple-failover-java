@@ -10,9 +10,8 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
-import org.apache.commons.lang3.RandomUtils;
-import org.apache.commons.lang3.math.NumberUtils;
 import org.junit.Test;
 
 import com.github.phantomthief.failover.Failover;
@@ -79,7 +78,7 @@ public class WeightFailoverTest {
     }
 
     private boolean doSomething(String obj, Failover<String> failover) {
-        boolean result = RandomUtils.nextInt(0, 10) > NumberUtils.toInt(obj);
+        boolean result = ThreadLocalRandom.current().nextInt(10) > Integer.parseInt(obj);
         if (result) {
             failover.success(obj);
         } else {

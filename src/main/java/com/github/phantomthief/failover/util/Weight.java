@@ -5,11 +5,11 @@ package com.github.phantomthief.failover.util;
 
 import static com.google.common.collect.Range.closedOpen;
 import static com.google.common.collect.TreeRangeMap.create;
-import static org.apache.commons.lang3.RandomUtils.nextLong;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 
 import com.google.common.collect.RangeMap;
 
@@ -65,5 +65,13 @@ public class Weight<T> {
     @Override
     public String toString() {
         return nodes.toString();
+    }
+
+    private static long nextLong(long startInclusive, long endExclusive) {
+        if (startInclusive == endExclusive) {
+            return startInclusive;
+        }
+
+        return (long) ThreadLocalRandom.current().nextDouble(startInclusive, endExclusive);
     }
 }

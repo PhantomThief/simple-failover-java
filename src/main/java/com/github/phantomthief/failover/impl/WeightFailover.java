@@ -11,7 +11,6 @@ import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static org.apache.commons.lang3.RandomUtils.nextInt;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.Closeable;
@@ -26,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
@@ -147,7 +147,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             if (sum == 0) {
                 break;
             }
-            int left = nextInt(0, sum);
+            int left = ThreadLocalRandom.current().nextInt(sum);
             Iterator<Entry<T, Integer>> iterator = snapshot.entrySet().iterator();
             while (iterator.hasNext()) {
                 Entry<T, Integer> candidate = iterator.next();

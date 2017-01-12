@@ -53,6 +53,7 @@ public class WeightFailoverTest {
         Failover<String> failover = WeightFailover.newBuilder() //
                 .checker(this::check) //
                 .minWeight(1) //
+                .onMinWeight(i -> System.out.println("onMin:" + i)) //
                 .build(original);
         Multiset<String> result = HashMultiset.create();
         Multiset<Integer> getCount = HashMultiset.create();

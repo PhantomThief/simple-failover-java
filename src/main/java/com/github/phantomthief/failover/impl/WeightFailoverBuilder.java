@@ -13,6 +13,7 @@ import static org.slf4j.LoggerFactory.getLogger;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
@@ -35,7 +36,16 @@ public final class WeightFailoverBuilder<T> {
     private Map<T, Integer> initWeightMap;
     private Predicate<T> checker;
     private long checkDuration;
+    private Consumer<T> onMinWeight;
     private int minWeight = 0;
+
+    @SuppressWarnings("unchecked")
+    public <E> WeightFailoverBuilder<E> onMinWeight(Consumer<E> listener) {
+        checkNotNull(listener);
+        WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
+        thisBuilder.onMinWeight = listener;
+        return thisBuilder;
+    }
 
     public WeightFailoverBuilder<T> minWeight(int value) {
         checkArgument(value >= 0);
@@ -122,7 +132,7 @@ public final class WeightFailoverBuilder<T> {
     private WeightFailover<T> build() {
         ensure();
         return new WeightFailover<>(failReduceWeight, successIncreaseWeight, recoveredInitWeight,
-                initWeightMap, minWeight, checkDuration, checker);
+                initWeightMap, minWeight, checkDuration, checker, onMinWeight);
     }
 
     private void ensure() {

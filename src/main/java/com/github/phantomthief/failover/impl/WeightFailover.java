@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
@@ -52,16 +53,18 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     private final ConcurrentMap<T, Integer> initWeightMap;
     private final ConcurrentMap<T, Integer> currentWeightMap;
     private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
+    private final Consumer<T> onMinWeight;
     private final int minWeight;
 
     WeightFailover(IntUnaryOperator failReduceWeight, IntUnaryOperator successIncreaseWeight,
             IntUnaryOperator recoveredInitWeight, Map<T, Integer> initWeightMap, int minWeight,
-            long failCheckDuration, Predicate<T> checker) {
+            long failCheckDuration, Predicate<T> checker, Consumer<T> onMinWeight) {
         this.minWeight = minWeight;
         this.failReduceWeight = failReduceWeight;
         this.successIncreaseWeight = successIncreaseWeight;
         this.initWeightMap = new ConcurrentHashMap<>(initWeightMap);
         this.currentWeightMap = new ConcurrentHashMap<>(initWeightMap);
+        this.onMinWeight = onMinWeight;
         this.recoveryFuture = lazy(
                 () -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
                     Set<T> recoveredObjects = this.currentWeightMap.entrySet().stream() //
@@ -111,7 +114,11 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 return null;
             }
             int initWeight = initWeightMap.get(k);
-            return max(minWeight, oldValue - failReduceWeight.applyAsInt(initWeight));
+            int result = max(minWeight, oldValue - failReduceWeight.applyAsInt(initWeight));
+            if (result == minWeight && onMinWeight != null) {
+                onMinWeight.accept(object);
+            }
+            return result;
         });
     }
 

@@ -6,6 +6,7 @@ package com.github.phantomthief.failover.impl;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
@@ -26,6 +27,11 @@ public class GenericWeightFailoverBuilder<E> {
 
     public GenericWeightFailoverBuilder<E> failReduce(int weight) {
         builder.failReduce(weight);
+        return this;
+    }
+
+    public GenericWeightFailoverBuilder<E> onMinWeight(Consumer<E> listener) {
+        builder.onMinWeight(listener);
         return this;
     }
 

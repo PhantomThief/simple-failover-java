@@ -67,13 +67,20 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         this.onMinWeight = onMinWeight;
         this.recoveryFuture = lazy(
                 () -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
-                    Set<T> recoveredObjects = this.currentWeightMap.entrySet().stream() //
-                            .filter(entry -> entry.getValue() == 0) //
-                            .map(Entry::getKey) //
-                            .filter(checker) //
-                            .collect(toSet());
-                    recoveredObjects.forEach(recovered -> currentWeightMap.put(recovered,
-                            recoveredInitWeight.applyAsInt(initWeightMap.get(recovered))));
+                    try {
+                        Set<T> recoveredObjects = this.currentWeightMap.entrySet().stream() //
+                                .filter(entry -> entry.getValue() == 0) //
+                                .map(Entry::getKey) //
+                                .filter(checker) //
+                                .collect(toSet());
+                        if (!recoveredObjects.isEmpty()) {
+                            logger.info("found recovered objects:{}", recoveredObjects);
+                        }
+                        recoveredObjects.forEach(recovered -> currentWeightMap.put(recovered,
+                                recoveredInitWeight.applyAsInt(initWeightMap.get(recovered))));
+                    } catch (Throwable e) {
+                        logger.error("", e);
+                    }
                 }, failCheckDuration, failCheckDuration, MILLISECONDS));
     }
 

@@ -27,7 +27,7 @@ public final class WeightFailoverBuilder<T> {
     private static final int DEFAULT_FAIL_REDUCE_WEIGHT = 5;
     private static final int DEFAULT_SUCCESS_INCREASE_WEIGHT = 1;
     private static final int DEFAULT_RECOVERED_INIT_WEIGHT = 1;
-    private static final long DEFAULT_CHECK_DURATION = SECONDS.toMillis(5);
+    private static final long DEFAULT_CHECK_DURATION = SECONDS.toMillis(1);
 
     private IntUnaryOperator failReduceWeight;
     private IntUnaryOperator successIncreaseWeight;

@@ -122,8 +122,10 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             }
             int initWeight = initWeightMap.get(k);
             int result = max(minWeight, oldValue - failReduceWeight.applyAsInt(initWeight));
-            if (result == minWeight && onMinWeight != null) {
-                onMinWeight.accept(object);
+            if (onMinWeight != null) {
+                if (result == minWeight && result != oldValue) {
+                    onMinWeight.accept(object);
+                }
             }
             return result;
         });

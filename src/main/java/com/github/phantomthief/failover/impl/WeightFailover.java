@@ -9,7 +9,6 @@ import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.emptySet;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -84,6 +83,10 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 }, failCheckDuration, failCheckDuration, MILLISECONDS));
     }
 
+    /**
+     * better use {@link #newGenericBuilder()} for type safe
+     */
+    @Deprecated
     public static WeightFailoverBuilder<Object> newBuilder() {
         return new WeightFailoverBuilder<>();
     }
@@ -105,7 +108,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public List<T> getAll() {
-        return initWeightMap.keySet().stream().collect(toList());
+        return new ArrayList<>(initWeightMap.keySet());
     }
 
     @Override

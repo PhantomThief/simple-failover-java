@@ -79,7 +79,7 @@ public final class WeightFailoverBuilder<T> {
 
     public WeightFailoverBuilder<T> recoveredInitRate(double rate) {
         checkArgument(rate > 0 && rate <= 1);
-        recoveredInitWeight = i -> Math.min(1, (int) (rate * i));
+        recoveredInitWeight = i -> Math.max(1, (int) (rate * i));
         return this;
     }
 

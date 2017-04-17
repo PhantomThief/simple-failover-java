@@ -55,7 +55,7 @@ public final class WeightFailoverBuilder<T> {
 
     public WeightFailoverBuilder<T> failReduceRate(double rate) {
         checkArgument(rate > 0 && rate <= 1);
-        failReduceWeight = i -> Math.min(1, (int) (rate * i));
+        failReduceWeight = i -> Math.max(1, (int) (rate * i));
         return this;
     }
 
@@ -67,7 +67,7 @@ public final class WeightFailoverBuilder<T> {
 
     public WeightFailoverBuilder<T> successIncreaseRate(double rate) {
         checkArgument(rate > 0 && rate <= 1);
-        successIncreaseWeight = i -> Math.min(1, (int) (rate * i));
+        successIncreaseWeight = i -> Math.max(1, (int) (rate * i));
         return this;
     }
 

@@ -21,21 +21,36 @@ public class SimplePortChecker {
     private static org.slf4j.Logger logger = getLogger(SimplePortChecker.class);
 
     public static boolean check(String host, int port) {
-        return check(host, port, DEFAULT_CONNECTION_TIMEOUT);
+        return check(null, host, port);
+    }
+
+    public static boolean check(String friendlyName, String host, int port) {
+        return check(friendlyName, host, port, DEFAULT_CONNECTION_TIMEOUT);
     }
 
     public static boolean check(HostAndPort hostAndPort) {
-        return check(hostAndPort.getHostText(), hostAndPort.getPort(), DEFAULT_CONNECTION_TIMEOUT);
+        return check(null, hostAndPort);
+    }
+
+    public static boolean check(String friendlyName, HostAndPort hostAndPort) {
+        return check(friendlyName, hostAndPort.getHostText(), hostAndPort.getPort(),
+                DEFAULT_CONNECTION_TIMEOUT);
     }
 
     public static boolean check(String host, int port, int connectionTimeoutInMs) {
+        return check(null, host, port, connectionTimeoutInMs);
+    }
+
+    public static boolean check(String friendlyName, String host, int port,
+            int connectionTimeoutInMs) {
+        String logName = friendlyName == null ? "" : "[" + friendlyName + "]";
         try (Socket socket = new Socket()) {
             SocketAddress sockaddr = new InetSocketAddress(host, port);
             socket.connect(sockaddr, connectionTimeoutInMs);
-            logger.info("[{}:{}] is reachable.", host, port);
+            logger.info("{}[{}:{}] is reachable.", logName, host, port);
             return true;
         } catch (Throwable e) {
-            logger.warn("[{}:{}] is NOT reachable.", host, port);
+            logger.warn("{}[{}:{}] is NOT reachable.", logName, host, port);
             return false;
         }
     }

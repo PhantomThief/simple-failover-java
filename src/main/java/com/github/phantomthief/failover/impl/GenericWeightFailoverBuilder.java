@@ -41,6 +41,12 @@ public class GenericWeightFailoverBuilder<E> {
     }
 
     @CheckReturnValue
+    public GenericWeightFailoverBuilder<E> onRecovered(Consumer<E> listener) {
+        builder.onRecovered(listener);
+        return this;
+    }
+
+    @CheckReturnValue
     public GenericWeightFailoverBuilder<E> successIncreaseRate(double rate) {
         builder.successIncreaseRate(rate);
         return this;

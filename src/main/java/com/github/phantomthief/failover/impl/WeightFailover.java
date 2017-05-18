@@ -57,7 +57,8 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     WeightFailover(IntUnaryOperator failReduceWeight, IntUnaryOperator successIncreaseWeight,
             IntUnaryOperator recoveredInitWeight, Map<T, Integer> initWeightMap, int minWeight,
-            long failCheckDuration, Predicate<T> checker, Consumer<T> onMinWeight) {
+            long failCheckDuration, Predicate<T> checker, Consumer<T> onMinWeight,
+            Consumer<T> onRecovered) {
         this.minWeight = minWeight;
         this.failReduceWeight = failReduceWeight;
         this.successIncreaseWeight = successIncreaseWeight;
@@ -75,8 +76,13 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                         if (!recoveredObjects.isEmpty()) {
                             logger.info("found recovered objects:{}", recoveredObjects);
                         }
-                        recoveredObjects.forEach(recovered -> currentWeightMap.put(recovered,
-                                recoveredInitWeight.applyAsInt(initWeightMap.get(recovered))));
+                        recoveredObjects.forEach(recovered -> {
+                            currentWeightMap.put(recovered,
+                                    recoveredInitWeight.applyAsInt(initWeightMap.get(recovered)));
+                            if (onRecovered != null) {
+                                onRecovered.accept(recovered);
+                            }
+                        });
                     } catch (Throwable e) {
                         logger.error("", e);
                     }

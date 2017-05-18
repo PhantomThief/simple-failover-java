@@ -39,6 +39,7 @@ public class WeightFailoverBuilder<T> {
     private Predicate<T> checker;
     private long checkDuration;
     private Consumer<T> onMinWeight;
+    private Consumer<T> onRecovered;
     private int minWeight = 0;
 
     @CheckReturnValue
@@ -47,6 +48,15 @@ public class WeightFailoverBuilder<T> {
         checkNotNull(listener);
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
         thisBuilder.onMinWeight = listener;
+        return thisBuilder;
+    }
+
+    @CheckReturnValue
+    @SuppressWarnings("unchecked")
+    public <E> WeightFailoverBuilder<E> onRecovered(Consumer<E> listener) {
+        checkNotNull(listener);
+        WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
+        thisBuilder.onRecovered = listener;
         return thisBuilder;
     }
 
@@ -144,7 +154,7 @@ public class WeightFailoverBuilder<T> {
     private WeightFailover<T> build() {
         ensure();
         return new WeightFailover<>(failReduceWeight, successIncreaseWeight, recoveredInitWeight,
-                initWeightMap, minWeight, checkDuration, checker, onMinWeight);
+                initWeightMap, minWeight, checkDuration, checker, onMinWeight, onRecovered);
     }
 
     private void ensure() {

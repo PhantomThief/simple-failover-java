@@ -16,7 +16,7 @@ public class GenericWeightFailoverBuilder<E> {
 
     private final WeightFailoverBuilder<Object> builder;
 
-    GenericWeightFailoverBuilder(WeightFailoverBuilder<Object> builder) {
+    public GenericWeightFailoverBuilder(WeightFailoverBuilder<Object> builder) {
         this.builder = builder;
     }
 

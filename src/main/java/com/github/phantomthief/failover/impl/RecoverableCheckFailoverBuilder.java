@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
+import javax.annotation.CheckReturnValue;
+
 import org.slf4j.Logger;
 
 public final class RecoverableCheckFailoverBuilder<T> {
@@ -26,29 +28,34 @@ public final class RecoverableCheckFailoverBuilder<T> {
     private boolean returnOriginalWhileAllFailed;
     private Predicate<T> checker;
 
+    @CheckReturnValue
     public RecoverableCheckFailoverBuilder<T> setFailCount(int failCount) {
         this.failCount = failCount;
         return this;
     }
 
     @SuppressWarnings("unchecked")
+    @CheckReturnValue
     public <E> RecoverableCheckFailoverBuilder<E> setChecker(Predicate<? super E> checker) {
         RecoverableCheckFailoverBuilder<E> thisBuilder = (RecoverableCheckFailoverBuilder<E>) this;
         thisBuilder.checker = thisBuilder.catching((Predicate<E>) checker);
         return thisBuilder;
     }
 
+    @CheckReturnValue
     public RecoverableCheckFailoverBuilder<T> setRecoveryCheckDuration(long recoveryCheckDuration,
             TimeUnit unit) {
         this.recoveryCheckDuration = unit.toMillis(recoveryCheckDuration);
         return this;
     }
 
+    @CheckReturnValue
     public RecoverableCheckFailoverBuilder<T> setFailDuration(long failDuration, TimeUnit unit) {
         this.failDuration = unit.toMillis(failDuration);
         return this;
     }
 
+    @CheckReturnValue
     public RecoverableCheckFailoverBuilder<T>
             setReturnOriginalWhileAllFailed(boolean returnOriginalWhileAllFailed) {
         this.returnOriginalWhileAllFailed = returnOriginalWhileAllFailed;

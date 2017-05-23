@@ -212,6 +212,6 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public String toString() {
-        return "WeightFailover [" + initWeightMap + "]";
+        return "WeightFailover [" + initWeightMap + "]" + "@" + Integer.toHexString(hashCode());
     }
 }

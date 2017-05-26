@@ -33,7 +33,7 @@ public class SimplePortChecker {
     }
 
     public static boolean check(String friendlyName, HostAndPort hostAndPort) {
-        return check(friendlyName, hostAndPort.getHostText(), hostAndPort.getPort(),
+        return check(friendlyName, hostAndPort.getHost(), hostAndPort.getPort(),
                 DEFAULT_CONNECTION_TIMEOUT);
     }
 

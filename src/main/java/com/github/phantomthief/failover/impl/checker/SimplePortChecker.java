@@ -24,6 +24,7 @@ public class SimplePortChecker {
         return check(null, host, port);
     }
 
+    @Deprecated
     public static boolean check(String friendlyName, String host, int port) {
         return check(friendlyName, host, port, DEFAULT_CONNECTION_TIMEOUT);
     }
@@ -32,6 +33,7 @@ public class SimplePortChecker {
         return check(null, hostAndPort);
     }
 
+    @Deprecated
     public static boolean check(String friendlyName, HostAndPort hostAndPort) {
         return check(friendlyName, hostAndPort.getHost(), hostAndPort.getPort(),
                 DEFAULT_CONNECTION_TIMEOUT);
@@ -41,6 +43,7 @@ public class SimplePortChecker {
         return check(null, host, port, connectionTimeoutInMs);
     }
 
+    @Deprecated
     public static boolean check(String friendlyName, String host, int port,
             int connectionTimeoutInMs) {
         String logName = friendlyName == null ? "" : "[" + friendlyName + "]";

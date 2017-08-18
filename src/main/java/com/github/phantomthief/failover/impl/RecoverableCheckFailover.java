@@ -90,7 +90,6 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             logger.warn("invalid fail obj:{}, it's not in original list.", object);
             return;
         }
-        recoveryFuture.get();
         logger.warn("server {} failed.", object);
         boolean addToFail = false;
         EvictingQueue<Long> evictingQueue = failCountMap.getUnchecked(object);
@@ -103,10 +102,19 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
         }
         if (addToFail) {
             failedList.add(object);
-            if (logger.isTraceEnabled()) {
-                logger.trace("server {} failed. add to fail list.", object);
-            }
         }
+        recoveryFuture.get();
+    }
+
+    @Override
+    public void down(T object) {
+        if (!getAll().contains(object)) {
+            logger.warn("invalid fail obj:{}, it's not in original list.", object);
+            return;
+        }
+        logger.warn("server {} down.", object);
+        failedList.add(object);
+        recoveryFuture.get();
     }
 
     @Override

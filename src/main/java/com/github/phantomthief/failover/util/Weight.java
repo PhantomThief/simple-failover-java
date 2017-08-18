@@ -11,6 +11,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
 import com.google.common.collect.RangeMap;
 
 /**
@@ -25,7 +28,7 @@ public class Weight<T> {
     private final RangeMap<Long, T> nodes = create();
     private long maxWeight = 0;
 
-    public Weight<T> add(T node, long weight) {
+    public Weight<T> add(@Nonnull T node, long weight) {
         if (weight > 0) {
             weightMap.put(node, weight);
             nodes.put(closedOpen(maxWeight, maxWeight + weight), node);
@@ -34,6 +37,7 @@ public class Weight<T> {
         return this;
     }
 
+    @Nullable
     public T get() {
         if (isEmpty()) {
             return null;
@@ -42,6 +46,7 @@ public class Weight<T> {
         return nodes.get(resultIndex);
     }
 
+    @Nullable
     public T getWithout(Set<T> exclusions) {
         if (weightMap.size() == exclusions.size()) {
             return null;

@@ -16,6 +16,8 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 
 import com.github.phantomthief.stats.n.DurationStats;
@@ -81,6 +83,7 @@ public class LatencyAware<T> {
         return new LatencyAware<>(DEFAULT_INIT_LATENCY, durationInMs, true);
     }
 
+    @Nullable
     public T get(Collection<T> candidates) {
         if (candidates == null || candidates.isEmpty()) {
             return null;

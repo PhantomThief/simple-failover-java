@@ -10,6 +10,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
+import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.github.phantomthief.failover.util.FailoverUtils;
@@ -23,13 +24,13 @@ public interface Failover<T> {
 
     List<T> getAll();
 
-    default void success(T object) {
+    default void success(@Nonnull T object) {
         // default behavior: do nothing
     }
 
-    void fail(T object);
+    void fail(@Nonnull T object);
 
-    void down(T object);
+    void down(@Nonnull T object);
 
     /**
      * better use {@code #getAvailable(int)} or {@code #getOneAvailable()}

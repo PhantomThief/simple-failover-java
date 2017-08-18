@@ -12,6 +12,8 @@ import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
+import javax.annotation.Nullable;
+
 /**
  * @author w.vela
  */
@@ -21,6 +23,7 @@ public class RandomListUtils {
         throw new UnsupportedOperationException();
     }
 
+    @Nullable
     public static <T> T getRandom(List<T> source) {
         if (source == null || source.isEmpty()) {
             return null;

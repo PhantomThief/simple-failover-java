@@ -29,6 +29,8 @@ public interface Failover<T> {
 
     void fail(T object);
 
+    void down(T object);
+
     /**
      * better use {@code #getAvailable(int)} or {@code #getOneAvailable()}
      */

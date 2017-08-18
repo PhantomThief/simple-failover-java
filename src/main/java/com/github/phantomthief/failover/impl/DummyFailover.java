@@ -46,6 +46,11 @@ public class DummyFailover<T> implements Failover<T> {
     }
 
     @Override
+    public void down(T object) {
+        // do nothing
+    }
+
+    @Override
     public List<T> getAvailable() {
         return getAll();
     }

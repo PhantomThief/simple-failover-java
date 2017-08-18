@@ -123,7 +123,6 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             logger.warn("invalid fail call, null object found.");
             return;
         }
-        recoveryFuture.get();
         currentWeightMap.compute(object, (k, oldValue) -> {
             if (oldValue == null) {
                 logger.warn("invalid fail obj:{}, it's not in original list.", object);
@@ -138,6 +137,29 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             }
             return result;
         });
+        recoveryFuture.get();
+    }
+
+    @Override
+    public void down(T object) {
+        if (object == null) {
+            logger.warn("invalid fail call, null object found.");
+            return;
+        }
+        currentWeightMap.compute(object, (k, oldValue) -> {
+            if (oldValue == null) {
+                logger.warn("invalid fail obj:{}, it's not in original list.", object);
+                return null;
+            }
+            int result = minWeight;
+            if (onMinWeight != null) {
+                if (result != oldValue) {
+                    onMinWeight.accept(object);
+                }
+            }
+            return result;
+        });
+        recoveryFuture.get();
     }
 
     @Override

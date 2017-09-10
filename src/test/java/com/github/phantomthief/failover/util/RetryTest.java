@@ -14,7 +14,7 @@ import org.junit.Test;
 import com.github.phantomthief.failover.impl.WeightFailover;
 
 /**
- * @author w.vela <wangtianzhou@kuaishou.com>
+ * @author w.vela
  * Created on 2017-06-09.
  */
 public class RetryTest {

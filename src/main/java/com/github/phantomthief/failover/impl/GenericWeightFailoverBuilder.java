@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.github.phantomthief.failover.impl;
 
 import java.util.Collection;

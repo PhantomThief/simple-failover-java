@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.github.phantomthief.failover.util;
 
 import static java.lang.Thread.MIN_PRIORITY;

@@ -1,21 +1,22 @@
 package com.github.phantomthief.failover.util;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * @author w.vela
  * Created on 16/2/19.
  */
-public class SharedResourceTest {
+class SharedResourceTest {
 
     private static SharedResource<String, MockResource> resources = new SharedResource<>();
 
     @Test
-    public void test() throws Exception {
+    void test() {
         resources.register("1", MockResource::new);
         resources.register("1", MockResource::new);
         resources.register("2", MockResource::new);
@@ -36,15 +37,11 @@ public class SharedResourceTest {
     }
 
     @Test
-    public void testUnpairUnregister() {
+    void testUnpairUnregister() {
         resources.register("3", MockResource::new);
         resources.unregister("3", MockResource::close);
-        try {
-            resources.unregister("3", MockResource::close);
-            fail("fail.");
-        } catch (IllegalStateException e) {
-            assertTrue(true);
-        }
+        assertThrows(IllegalStateException.class,
+                () -> resources.unregister("3", MockResource::close));
     }
 
     private static class MockResource {
@@ -62,7 +59,7 @@ public class SharedResourceTest {
 
         void close() {
             if (shutdown) {
-                fail();
+                fail("failed");
             }
             shutdown = true;
             System.out.println("shutdown:" + name);

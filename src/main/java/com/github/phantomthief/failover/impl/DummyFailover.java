@@ -3,8 +3,8 @@ package com.github.phantomthief.failover.impl;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.singletonList;
 import static java.util.Collections.unmodifiableList;
-import static java.util.stream.Collectors.toList;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
@@ -36,7 +36,7 @@ public class DummyFailover<T> implements Failover<T> {
         if (all instanceof List) {
             return unmodifiableList((List<? extends T>) all);
         } else {
-            return all.stream().collect(toList());
+            return new ArrayList<>(all);
         }
     }
 

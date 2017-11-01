@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.github.phantomthief.failover.util;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
@@ -14,7 +11,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -22,12 +19,12 @@ import com.google.common.util.concurrent.MoreExecutors;
 /**
  * @author w.vela
  */
-public class LatencyAwareTest {
+class LatencyAwareTest {
 
     private ConcurrentMap<Integer, AtomicInteger> callCount = new ConcurrentHashMap<>();
 
     @Test
-    public void test() {
+    void test() {
         List<Integer> candidates = Lists.newArrayList(1, 2, 3, 10);
         LatencyAware<Integer> latencyAware = LatencyAware.create();
         ExecutorService executorService = Executors.newFixedThreadPool(10);

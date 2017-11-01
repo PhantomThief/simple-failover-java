@@ -3,13 +3,14 @@ package com.github.phantomthief.failover.util;
 import static com.google.common.base.Predicates.alwaysFalse;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 import java.util.stream.IntStream;
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.impl.WeightFailover;
 
@@ -17,10 +18,10 @@ import com.github.phantomthief.failover.impl.WeightFailover;
  * @author w.vela
  * Created on 2017-06-09.
  */
-public class RetryTest {
+class RetryTest {
 
     @Test
-    public void test() {
+    void test() {
         WeightFailover<Integer> failover = buildNewFailover();
         for (int i = 0; i < 50; i++) {
             String x = failover.supplyWithRetry(this::doSomething);
@@ -29,15 +30,12 @@ public class RetryTest {
         }
         failover = buildNewFailover();
         System.out.println("test fail");
+        WeightFailover<Integer> thisFailover = failover;
         for (int i = 0; i < 50; i++) {
-            try {
-                String x = failover.supplyWithRetry(this::alwaysFail);
+            assertThrows(Throwable.class, () -> {
+                String x = thisFailover.supplyWithRetry(this::alwaysFail);
                 System.out.println(x);
-                Assert.fail();
-            } catch (Throwable e) {
-                Assert.assertTrue(true);
-                System.out.println("fail, pass.");
-            }
+            });
         }
         failover = buildNewFailover();
         System.out.println("test some failed.");
@@ -47,7 +45,7 @@ public class RetryTest {
                 System.out.println(x);
                 assertEquals(x, "r:1");
             } catch (Throwable e) {
-                Assert.assertTrue(true);
+                assertTrue(true);
                 System.out.println("fail, pass.");
             }
         }

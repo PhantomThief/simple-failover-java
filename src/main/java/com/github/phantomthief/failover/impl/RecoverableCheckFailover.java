@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.github.phantomthief.failover.impl;
 
 import static com.github.phantomthief.failover.util.SharedCheckExecutorHolder.getInstance;

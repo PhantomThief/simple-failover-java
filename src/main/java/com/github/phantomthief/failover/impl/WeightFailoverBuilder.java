@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.github.phantomthief.failover.impl;
 
 import static com.google.common.base.Preconditions.checkArgument;

@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.github.phantomthief.failover.util;
 
 import static com.google.common.base.Predicates.alwaysTrue;

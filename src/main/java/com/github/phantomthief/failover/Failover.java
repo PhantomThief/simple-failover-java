@@ -1,6 +1,3 @@
-/**
- * 
- */
 package com.github.phantomthief.failover;
 
 import static com.github.phantomthief.failover.util.RandomListUtils.getRandom;

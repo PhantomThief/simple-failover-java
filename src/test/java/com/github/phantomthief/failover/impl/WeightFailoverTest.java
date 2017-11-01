@@ -1,20 +1,17 @@
-/**
- * 
- */
 package com.github.phantomthief.failover.impl;
 
 import static com.google.common.base.Predicates.alwaysFalse;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.Failover;
 import com.google.common.collect.HashMultiset;
@@ -23,10 +20,10 @@ import com.google.common.collect.Multiset;
 /**
  * @author w.vela
  */
-public class WeightFailoverTest {
+class WeightFailoverTest {
 
     @Test
-    public void testCommon() {
+    void testCommon() {
         List<String> original = Arrays.asList("1", "2", "3");
         Failover<String> failover = WeightFailover.newBuilder() //
                 .checker(this::check) //
@@ -50,7 +47,7 @@ public class WeightFailoverTest {
     }
 
     @Test
-    public void testMinWeight() {
+    void testMinWeight() {
         List<String> original = Arrays.asList("1", "2", "3");
         Failover<String> failover = WeightFailover.newBuilder() //
                 .checker(this::check) //
@@ -76,7 +73,7 @@ public class WeightFailoverTest {
     }
 
     @Test
-    public void testDown() {
+    void testDown() {
         List<String> original = Arrays.asList("1", "2", "3");
         Failover<String> failover = WeightFailover.<String> newGenericBuilder() //
                 .checker(alwaysFalse()) //

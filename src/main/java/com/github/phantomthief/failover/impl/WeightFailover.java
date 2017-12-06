@@ -52,6 +52,8 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     private final Consumer<T> onMinWeight;
     private final int minWeight;
 
+    private volatile boolean closed = true;
+
     WeightFailover(IntUnaryOperator failReduceWeight, IntUnaryOperator successIncreaseWeight,
             IntUnaryOperator recoveredInitWeight, Map<T, Integer> initWeightMap, int minWeight,
             long failCheckDuration, Predicate<T> checker, Consumer<T> onMinWeight,
@@ -64,6 +66,10 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         this.onMinWeight = onMinWeight;
         this.recoveryFuture = lazy(
                 () -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
+                    if (closed) {
+                        tryCloseRecoveryScheduler();
+                        return;
+                    }
                     try {
                         Set<T> recoveredObjects = this.currentWeightMap.entrySet().stream() //
                                 .filter(entry -> entry.getValue() == 0) //
@@ -100,6 +106,11 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public synchronized void close() {
+        closed = true;
+        tryCloseRecoveryScheduler();
+    }
+
+    private void tryCloseRecoveryScheduler() {
         recoveryFuture.ifPresent(future -> {
             if (!future.isCancelled()) {
                 if (!future.cancel(true)) {

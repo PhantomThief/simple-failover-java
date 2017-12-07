@@ -43,6 +43,8 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
     private final boolean returnOriginalWhileAllFailed;
     private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
 
+    private volatile boolean closed;
+
     RecoverableCheckFailover(List<T> original, Predicate<T> checker, int failCount,
             long failDuration, long recoveryCheckDuration, boolean returnOriginalWhileAllFailed) {
         this.returnOriginalWhileAllFailed = returnOriginalWhileAllFailed;
@@ -57,6 +59,10 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                     }
                 });
         recoveryFuture = lazy(() -> getInstance().scheduleWithFixedDelay(() -> {
+            if (closed) {
+                tryCloseScheduler();
+                return;
+            }
             if (failedList == null || failedList.isEmpty()) {
                 return;
             }
@@ -143,6 +149,11 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
     }
 
     public synchronized void close() {
+        closed = true;
+        tryCloseScheduler();
+    }
+
+    private void tryCloseScheduler() {
         recoveryFuture.ifPresent(future -> {
             if (!future.isCancelled()) {
                 if (!future.cancel(true)) {

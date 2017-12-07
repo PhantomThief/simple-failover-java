@@ -52,7 +52,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     private final Consumer<T> onMinWeight;
     private final int minWeight;
 
-    private volatile boolean closed = false;
+    private volatile boolean closed;
 
     WeightFailover(IntUnaryOperator failReduceWeight, IntUnaryOperator successIncreaseWeight,
             IntUnaryOperator recoveredInitWeight, Map<T, Integer> initWeightMap, int minWeight,

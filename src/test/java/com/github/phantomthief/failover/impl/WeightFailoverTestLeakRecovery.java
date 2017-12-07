@@ -20,7 +20,6 @@ class WeightFailoverTestLeakRecovery {
         WeightFailover<String> weightFailover = WeightFailover.<String> newGenericBuilder() //
                 .checkDuration(10, MILLISECONDS) //
                 .checker(str -> {
-                    System.out.println("test:" + str);
                     check[0] = true;
                     return false;
                 }).build(singletonList("test"), 10);

@@ -28,16 +28,25 @@ public class WeightFailoverBuilder<T> {
     private static final int DEFAULT_RECOVERED_INIT_WEIGHT = 1;
     private static final long DEFAULT_CHECK_DURATION = SECONDS.toMillis(1);
 
-    private IntUnaryOperator failReduceWeight;
-    private IntUnaryOperator successIncreaseWeight;
-    private IntUnaryOperator recoveredInitWeight;
+    IntUnaryOperator failReduceWeight;
+    IntUnaryOperator successIncreaseWeight;
+    IntUnaryOperator recoveredInitWeight;
 
-    private Map<T, Integer> initWeightMap;
-    private Predicate<T> checker;
-    private long checkDuration;
-    private Consumer<T> onMinWeight;
-    private Consumer<T> onRecovered;
-    private int minWeight = 0;
+    Map<T, Integer> initWeightMap;
+    Predicate<T> checker;
+    long checkDuration;
+    Consumer<T> onMinWeight;
+    Consumer<T> onRecovered;
+    int minWeight = 0;
+    Integer weightOnMissingNode;
+
+    @CheckReturnValue
+    public <E> WeightFailoverBuilder<E> autoAddOnMissing(int weight) {
+        checkArgument(weight >= 0);
+        WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
+        this.weightOnMissingNode = weight;
+        return thisBuilder;
+    }
 
     @CheckReturnValue
     @SuppressWarnings("unchecked")
@@ -150,8 +159,7 @@ public class WeightFailoverBuilder<T> {
 
     private WeightFailover<T> build() {
         ensure();
-        return new WeightFailover<>(failReduceWeight, successIncreaseWeight, recoveredInitWeight,
-                initWeightMap, minWeight, checkDuration, checker, onMinWeight, onRecovered);
+        return new WeightFailover<>(this);
     }
 
     private void ensure() {

@@ -20,6 +20,12 @@ public class GenericWeightFailoverBuilder<E> {
     }
 
     @CheckReturnValue
+    public GenericWeightFailoverBuilder<E> autoAddOnMissing(int weight) {
+        builder.autoAddOnMissing(weight);
+        return this;
+    }
+
+    @CheckReturnValue
     public GenericWeightFailoverBuilder<E> failReduceRate(double rate) {
         builder.failReduceRate(rate);
         return this;

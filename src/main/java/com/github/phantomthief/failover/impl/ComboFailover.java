@@ -29,12 +29,14 @@ import com.google.common.collect.Multimap;
 public class ComboFailover<T> implements Failover<T> {
 
     private final List<Failover<T>> failoverList;
+    private final boolean recheckOnMiss;
 
     private volatile Multimap<T, Failover<T>> mapByObject;
 
-    private ComboFailover(List<Failover<T>> failoverList) {
-        this.failoverList = failoverList;
-        this.mapByObject = groupByObjects();
+    private ComboFailover(ComboFailoverBuilder<T> builder) {
+        this.failoverList = builder.list;
+        this.recheckOnMiss = builder.recheckOnMiss;
+        mapByObject = groupByObjects();
     }
 
     public static <T> ComboFailoverBuilder<T> builder() {
@@ -126,7 +128,7 @@ public class ComboFailover<T> implements Failover<T> {
 
     private Collection<Failover<T>> getByObject(T object) {
         Collection<Failover<T>> list = mapByObject.get(object);
-        if (list.isEmpty()) { // surely it's wrong. build it again.
+        if (recheckOnMiss && list.isEmpty()) { // surely it's wrong. build it again.
             mapByObject = groupByObjects();
             list = mapByObject.get(object);
         }
@@ -137,6 +139,7 @@ public class ComboFailover<T> implements Failover<T> {
     public static class ComboFailoverBuilder<T> {
 
         private final List<Failover<T>> list = new ArrayList<>();
+        private boolean recheckOnMiss;
 
         private ComboFailoverBuilder() {
         }
@@ -154,8 +157,14 @@ public class ComboFailover<T> implements Failover<T> {
             return this;
         }
 
+        @CheckReturnValue
+        public ComboFailoverBuilder<T> recheckOnMiss(boolean value) {
+            recheckOnMiss = value;
+            return this;
+        }
+
         public ComboFailover<T> build() {
-            return new ComboFailover<>(list);
+            return new ComboFailover<>(this);
         }
     }
 }

@@ -8,6 +8,7 @@ import static java.util.stream.Collectors.toSet;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -26,7 +27,7 @@ import com.google.common.collect.Multimap;
  * @author w.vela
  * Created on 2017-12-28.
  */
-public class ComboFailover<T> implements Failover<T> {
+public class ComboFailover<T> implements Failover<T>, Iterable<Failover<T>> {
 
     private final List<Failover<T>> failoverList;
     private final boolean recheckOnMiss;
@@ -133,6 +134,11 @@ public class ComboFailover<T> implements Failover<T> {
             list = mapByObject.get(object);
         }
         return list;
+    }
+
+    @Override
+    public Iterator<Failover<T>> iterator() {
+        return failoverList.iterator();
     }
 
     @NotThreadSafe

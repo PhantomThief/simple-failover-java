@@ -1,5 +1,6 @@
 package com.github.phantomthief.failover.impl;
 
+import static com.google.common.base.Throwables.throwIfUnchecked;
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.Collections.singleton;
@@ -74,6 +75,17 @@ class ComboFailoverTest {
             assertTrue(of("test3", "test4").contains(combo.getOneAvailable()));
         }
         sleepUninterruptibly(2, SECONDS);
+
+        combo.forEach(failover -> {
+            if (failover instanceof AutoCloseable) {
+                try {
+                    ((AutoCloseable) failover).close();
+                } catch (Exception e) {
+                    throwIfUnchecked(e);
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     private boolean check(String value) {

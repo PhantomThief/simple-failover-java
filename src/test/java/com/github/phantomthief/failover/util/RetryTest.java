@@ -14,6 +14,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.impl.WeightFailover;
+import com.github.phantomthief.util.ThrowableFunction;
 
 /**
  * @author w.vela
@@ -58,6 +59,15 @@ class RetryTest {
         assertThrows(TimeoutException.class, () -> failover.supplyWithRetry(i -> {
             throw new TimeoutException();
         }));
+        WeightFailover<Integer> failover2 = buildNewFailover();
+        assertThrows(ArithmeticException.class, () -> {
+            ThrowableFunction<Integer, Object, TimeoutException> func = i -> {
+                int j = 0;
+                System.out.println(j / 0);
+                throw new TimeoutException();
+            };
+            failover2.supplyWithRetry(func);
+        });
     }
 
     private WeightFailover<Integer> buildNewFailover() {

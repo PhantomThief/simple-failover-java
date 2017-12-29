@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
+import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
@@ -49,6 +50,14 @@ class RetryTest {
                 System.out.println("fail, pass.");
             }
         }
+    }
+
+    @Test
+    void testRetry(){
+        WeightFailover<Integer> failover = buildNewFailover();
+        assertThrows(TimeoutException.class, () -> failover.supplyWithRetry(i -> {
+            throw new TimeoutException();
+        }));
     }
 
     private WeightFailover<Integer> buildNewFailover() {

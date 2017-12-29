@@ -1,7 +1,7 @@
 package com.github.phantomthief.failover.util;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Predicates.alwaysTrue;
-import static com.google.common.base.Throwables.throwIfUnchecked;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Predicate;
 
+import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 
 import com.github.phantomthief.failover.Failover;
@@ -34,9 +35,10 @@ public class FailoverUtils {
     /**
      * @param failChecker {@code true} if need retry, {@code false} means no need retry and mark success
      */
-    public static <T, R, X extends Throwable> R supplyWithRetry(int maxRetryTimes,
+    public static <T, R, X extends Throwable> R supplyWithRetry(@Nonnegative int maxRetryTimes,
             long sleepBetweenRetryMs, Failover<T> failover, ThrowableFunction<T, R, X> func,
             @Nonnull Predicate<Throwable> failChecker) throws X {
+        checkArgument(maxRetryTimes > 0);
         Set<T> failed = new HashSet<>();
         Throwable lastError = null;
         for (int i = 0; i < maxRetryTimes; i++) {
@@ -64,8 +66,8 @@ public class FailoverUtils {
                 throw new NoAvailableResourceException();
             }
         }
-        throwIfUnchecked(lastError);
-        throw new RuntimeException(lastError);
+        //noinspection unchecked
+        throw (X) lastError;
     }
 
     public static <T, R, X extends Throwable> R supply(Failover<T> failover,

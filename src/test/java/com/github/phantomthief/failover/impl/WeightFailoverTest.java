@@ -1,6 +1,7 @@
 package com.github.phantomthief.failover.impl;
 
 import static com.google.common.base.Predicates.alwaysFalse;
+import static com.google.common.base.Predicates.alwaysTrue;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -8,7 +9,9 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.Test;
@@ -89,6 +92,26 @@ class WeightFailoverTest {
         }
         System.out.println(getCount);
         System.out.println(result);
+    }
+
+    @Test
+    void testLarge() {
+        Map<String, Integer> map = new HashMap<>();
+        for (int i = 0; i < 108; i++) {
+            map.put("i" + i, 32518);
+        }
+        for (int i = 0; i < 331; i++) {
+            map.put("j" + i, 2652);
+        }
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
+                .checker(alwaysTrue()) //
+                .build(map);
+        Multiset<String> counter = HashMultiset.create();
+        for (int i = 0; i < 100000; i++) {
+            String oneAvailable = failover.getOneAvailable();
+            counter.add(oneAvailable.substring(0, 1));
+        }
+        System.out.println(counter);
     }
 
     private boolean check(String test) {

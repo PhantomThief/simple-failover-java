@@ -5,6 +5,8 @@
     <version>0.1.7-SNAPSHOT</version>
 
     <properties>
+        <more-lambdas.version>0.1.12</more-lambdas.version>
+
         <junit-jupiter.version>5.0.2</junit-jupiter.version>
         <junit-platform.version>1.0.2</junit-platform.version>
 
@@ -65,7 +67,7 @@
         <dependency>
             <groupId>com.github.phantomthief</groupId>
             <artifactId>more-lambdas</artifactId>
-            <version>0.1.8</version>
+            <version>${more-lambdas.version}</version>
         </dependency>
 
         <dependency>

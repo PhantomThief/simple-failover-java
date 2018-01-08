@@ -1,7 +1,5 @@
 package com.github.phantomthief.failover.impl;
 
-import static com.google.common.base.Predicates.alwaysFalse;
-import static com.google.common.base.Predicates.alwaysTrue;
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -82,7 +80,7 @@ class WeightFailoverTest {
     void testDown() {
         List<String> original = Arrays.asList("1", "2", "3");
         Failover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .checker(alwaysFalse(), 1) //
+                .checker(it -> false, 1) //
                 .onMinWeight(i -> System.out.println("onMin:" + i)) //
                 .build(original);
         Multiset<String> result = HashMultiset.create();
@@ -107,7 +105,7 @@ class WeightFailoverTest {
             map.put("j" + i, 2652);
         }
         WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .checker(alwaysTrue(), 1) //
+                .checker(it -> true, 1) //
                 .build(map);
         Multiset<String> counter = HashMultiset.create();
         for (int i = 0; i < 100000; i++) {

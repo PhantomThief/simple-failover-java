@@ -12,7 +12,6 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
-import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 
 import javax.annotation.CheckReturnValue;
@@ -20,6 +19,9 @@ import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
 
 import org.slf4j.Logger;
+
+import com.github.phantomthief.util.ThrowableFunction;
+import com.github.phantomthief.util.ThrowablePredicate;
 
 public class WeightFailoverBuilder<T> {
 
@@ -112,12 +114,13 @@ public class WeightFailoverBuilder<T> {
 
     @SuppressWarnings("unchecked")
     @CheckReturnValue
-    public <E> WeightFailoverBuilder<E> checker(@Nonnull ToDoubleFunction<? super E> failChecker) {
+    public <E> WeightFailoverBuilder<E>
+            checker(@Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker) {
         checkNotNull(failChecker);
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
         thisBuilder.checker = t -> {
             try {
-                return failChecker.applyAsDouble(t);
+                return failChecker.apply(t);
             } catch (Throwable e) {
                 logger.error("", e);
                 return 0;
@@ -128,7 +131,8 @@ public class WeightFailoverBuilder<T> {
 
     @SuppressWarnings("unchecked")
     @CheckReturnValue
-    public <E> WeightFailoverBuilder<E> checker(@Nonnull Predicate<? super E> failChecker,
+    public <E> WeightFailoverBuilder<E> checker(
+            @Nonnull ThrowablePredicate<? super E, Throwable> failChecker,
             @Nonnegative double recoveredInitRate) {
         checkArgument(recoveredInitRate >= 0 && recoveredInitRate <= 1);
         checkNotNull(failChecker);

@@ -4,12 +4,13 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
-import java.util.function.Predicate;
-import java.util.function.ToDoubleFunction;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+
+import com.github.phantomthief.util.ThrowableFunction;
+import com.github.phantomthief.util.ThrowablePredicate;
 
 /**
  * @author w.vela
@@ -78,13 +79,14 @@ public class GenericWeightFailoverBuilder<E> {
 
     @CheckReturnValue
     public GenericWeightFailoverBuilder<E>
-            checker(@Nonnull ToDoubleFunction<? super E> failChecker) {
+            checker(@Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker) {
         builder.checker(failChecker);
         return this;
     }
 
     @CheckReturnValue
-    public GenericWeightFailoverBuilder<E> checker(@Nonnull Predicate<? super E> failChecker,
+    public GenericWeightFailoverBuilder<E> checker(
+            @Nonnull ThrowablePredicate<? super E, Throwable> failChecker,
             @Nonnegative double recoveredInitRate) {
         builder.checker(failChecker, recoveredInitRate);
         return this;

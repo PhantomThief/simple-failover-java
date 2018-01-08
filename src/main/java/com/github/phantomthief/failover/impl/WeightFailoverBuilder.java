@@ -120,7 +120,9 @@ public class WeightFailoverBuilder<T> {
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
         thisBuilder.checker = t -> {
             try {
-                return failChecker.apply(t);
+                Double rate = failChecker.apply(t);
+                checkNotNull(rate);
+                return rate;
             } catch (Throwable e) {
                 logger.error("", e);
                 return 0;

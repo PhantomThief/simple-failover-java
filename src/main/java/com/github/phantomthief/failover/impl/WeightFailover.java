@@ -1,6 +1,7 @@
 package com.github.phantomthief.failover.impl;
 
 import static com.github.phantomthief.util.MoreSuppliers.lazy;
+import static com.google.common.primitives.Ints.constrainToRange;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -73,17 +74,26 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                         return;
                     }
                     try {
-                        Set<T> recoveredObjects = this.currentWeightMap.entrySet().stream() //
-                                .filter(entry -> entry.getValue() == 0) //
-                                .map(Entry::getKey) //
-                                .filter(builder.checker) //
-                                .collect(toSet());
+                        Map<T, Double> recoveredObjects = new HashMap<>();
+                        this.currentWeightMap.forEach((obj, weight) -> {
+                            if (weight == 0) {
+                                double recoverRate = builder.checker.applyAsDouble(obj);
+                                if (recoverRate > 0) {
+                                    recoveredObjects.put(obj, recoverRate);
+                                }
+                            }
+                        });
                         if (!recoveredObjects.isEmpty()) {
                             logger.info("found recovered objects:{}", recoveredObjects);
                         }
-                        recoveredObjects.forEach(recovered -> {
-                            currentWeightMap.put(recovered, builder.recoveredInitWeight
-                                    .applyAsInt(initWeightMap.get(recovered)));
+                        recoveredObjects.forEach((recovered, rate) -> {
+                            Integer initWeight = initWeightMap.get(recovered);
+                            if (initWeight == null) {
+                                throw new IllegalStateException("obj:" + recovered);
+                            }
+                            int recoveredWeight = constrainToRange((int) (initWeight * rate), 1,
+                                    initWeight);
+                            currentWeightMap.put(recovered, recoveredWeight);
                             if (builder.onRecovered != null) {
                                 builder.onRecovered.accept(recovered);
                             }
@@ -255,6 +265,10 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 .filter(entry -> entry.getValue() == 0) //
                 .map(Entry::getKey) //
                 .collect(toSet());
+    }
+
+    double currentWeight(T obj) {
+        return currentWeightMap.get(obj);
     }
 
     @Override

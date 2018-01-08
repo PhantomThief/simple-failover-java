@@ -74,7 +74,7 @@ class RetryTest {
         Map<Integer, Integer> weightMap = IntStream.range(1, 4).boxed()
                 .collect(toMap(identity(), i -> 5));
         return WeightFailover.<Integer> newGenericBuilder() //
-                .checker(alwaysFalse()) //
+                .checker(alwaysFalse(), 1) //
                 .build(weightMap);
     }
 

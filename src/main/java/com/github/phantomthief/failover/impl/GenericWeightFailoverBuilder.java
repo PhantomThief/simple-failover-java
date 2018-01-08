@@ -5,8 +5,11 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
 
 import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
 
 /**
  * @author w.vela
@@ -62,18 +65,6 @@ public class GenericWeightFailoverBuilder<E> {
     }
 
     @CheckReturnValue
-    public GenericWeightFailoverBuilder<E> recoveredInitRate(double rate) {
-        builder.recoveredInitRate(rate);
-        return this;
-    }
-
-    @CheckReturnValue
-    public GenericWeightFailoverBuilder<E> recoveredInit(int weight) {
-        builder.recoveredInit(weight);
-        return this;
-    }
-
-    @CheckReturnValue
     public GenericWeightFailoverBuilder<E> minWeight(int weight) {
         builder.minWeight(weight);
         return this;
@@ -86,8 +77,16 @@ public class GenericWeightFailoverBuilder<E> {
     }
 
     @CheckReturnValue
-    public GenericWeightFailoverBuilder<E> checker(Predicate<? super E> failChecker) {
+    public GenericWeightFailoverBuilder<E>
+            checker(@Nonnull ToDoubleFunction<? super E> failChecker) {
         builder.checker(failChecker);
+        return this;
+    }
+
+    @CheckReturnValue
+    public GenericWeightFailoverBuilder<E> checker(@Nonnull Predicate<? super E> failChecker,
+            @Nonnegative double recoveredInitRate) {
+        builder.checker(failChecker, recoveredInitRate);
         return this;
     }
 
@@ -102,5 +101,4 @@ public class GenericWeightFailoverBuilder<E> {
     public WeightFailover<E> build(Map<? extends E, Integer> original) {
         return builder.build(original);
     }
-
 }

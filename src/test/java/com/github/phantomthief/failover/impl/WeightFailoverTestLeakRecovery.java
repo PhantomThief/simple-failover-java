@@ -21,7 +21,7 @@ class WeightFailoverTestLeakRecovery {
                 .checkDuration(10, MILLISECONDS) //
                 .checker(str -> {
                     check[0] = true;
-                    return false;
+                    return 0;
                 }).build(singletonList("test"), 10);
         weightFailover.down("test");
         sleepUninterruptibly(100, MILLISECONDS);

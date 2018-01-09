@@ -30,13 +30,11 @@ class ComboFailoverTest {
                         .checker(this::check) //
                         .checkDuration(1, SECONDS) //
                         .failReduceRate(0.1) //
-                        .recoveredInitRate(0.5) //
                         .build(of("test1", "test2"))) //
                 .add(WeightFailover.<String> newGenericBuilder() //
                         .checker(this::check) //
                         .checkDuration(1, SECONDS) //
                         .failReduceRate(0.1) //
-                        .recoveredInitRate(0.5) //
                         .build(of("test3", "test4"))) //
                 .build();
         ImmutableList<String> all = of("test1", "test2", "test3", "test4");
@@ -88,8 +86,8 @@ class ComboFailoverTest {
         });
     }
 
-    private boolean check(String value) {
+    private double check(String value) {
         logger.info("check:{}", value);
-        return true;
+        return 0.5D;
     }
 }

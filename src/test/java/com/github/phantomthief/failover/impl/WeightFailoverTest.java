@@ -1,9 +1,10 @@
 package com.github.phantomthief.failover.impl;
 
-import static com.google.common.base.Predicates.alwaysFalse;
-import static com.google.common.base.Predicates.alwaysTrue;
+import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -29,7 +30,7 @@ class WeightFailoverTest {
     void testCommon() {
         List<String> original = Arrays.asList("1", "2", "3");
         Failover<String> failover = WeightFailover.newBuilder() //
-                .checker(this::check) //
+                .checker(this::check, 1) //
                 .build(original);
         Multiset<String> result = HashMultiset.create();
         Multiset<Integer> getCount = HashMultiset.create();
@@ -53,7 +54,7 @@ class WeightFailoverTest {
     void testMinWeight() {
         List<String> original = Arrays.asList("1", "2", "3");
         Failover<String> failover = WeightFailover.newBuilder() //
-                .checker(this::check) //
+                .checker(this::check, 1) //
                 .minWeight(1) //
                 .onMinWeight(i -> System.out.println("onMin:" + i)) //
                 .build(original);
@@ -79,7 +80,7 @@ class WeightFailoverTest {
     void testDown() {
         List<String> original = Arrays.asList("1", "2", "3");
         Failover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .checker(alwaysFalse()) //
+                .checker(it -> false, 1) //
                 .onMinWeight(i -> System.out.println("onMin:" + i)) //
                 .build(original);
         Multiset<String> result = HashMultiset.create();
@@ -104,7 +105,7 @@ class WeightFailoverTest {
             map.put("j" + i, 2652);
         }
         WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .checker(alwaysTrue()) //
+                .checker(it -> true, 1) //
                 .build(map);
         Multiset<String> counter = HashMultiset.create();
         for (int i = 0; i < 100000; i++) {
@@ -112,6 +113,32 @@ class WeightFailoverTest {
             counter.add(oneAvailable.substring(0, 1));
         }
         System.out.println(counter);
+    }
+
+    @Test
+    void testRateRecover() {
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .checker(it -> 0.5) //
+                .build(of("s1", "s2"), 100);
+        assertEquals(100, failover.currentWeight("s1"));
+        assertEquals(100, failover.currentWeight("s2"));
+        failover.down("s2");
+        assertEquals(0, failover.currentWeight("s2"));
+        sleepUninterruptibly(2, SECONDS);
+        assertEquals(50, failover.currentWeight("s2"));
+    }
+
+    @Test
+    void testRateRecover2() {
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .checker(it -> true, 0.00001) //
+                .build(of("s1", "s2"), 100);
+        assertEquals(100, failover.currentWeight("s1"));
+        assertEquals(100, failover.currentWeight("s2"));
+        failover.down("s2");
+        assertEquals(0, failover.currentWeight("s2"));
+        sleepUninterruptibly(2, SECONDS);
+        assertEquals(1, failover.currentWeight("s2"));
     }
 
     private boolean check(String test) {

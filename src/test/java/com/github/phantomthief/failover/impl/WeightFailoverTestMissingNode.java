@@ -20,7 +20,7 @@ class WeightFailoverTestMissingNode {
                 .checker(s -> {
                     System.err.println("check:" + s);
                     return s.equals("test1");
-                }) //
+                }, 1) //
                 .checkDuration(1, SECONDS) //
                 .autoAddOnMissing(10) //
                 .build(emptyList());
@@ -57,7 +57,7 @@ class WeightFailoverTestMissingNode {
                 .checker(s -> {
                     System.err.println("check:" + s);
                     return s.equals("test1");
-                }) //
+                }, 1) //
                 .checkDuration(1, SECONDS) //
                 .build(emptyList());
         assertTrue(failover.getAll().isEmpty());

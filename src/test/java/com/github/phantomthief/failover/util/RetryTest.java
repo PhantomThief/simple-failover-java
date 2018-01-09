@@ -1,6 +1,5 @@
 package com.github.phantomthief.failover.util;
 
-import static com.google.common.base.Predicates.alwaysFalse;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -74,7 +73,7 @@ class RetryTest {
         Map<Integer, Integer> weightMap = IntStream.range(1, 4).boxed()
                 .collect(toMap(identity(), i -> 5));
         return WeightFailover.<Integer> newGenericBuilder() //
-                .checker(alwaysFalse()) //
+                .checker(it -> false, 1) //
                 .build(weightMap);
     }
 

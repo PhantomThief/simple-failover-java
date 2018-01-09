@@ -12,11 +12,16 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
-import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
 
 import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnegative;
+import javax.annotation.Nonnull;
 
 import org.slf4j.Logger;
+
+import com.github.phantomthief.util.ThrowableFunction;
+import com.github.phantomthief.util.ThrowablePredicate;
 
 public class WeightFailoverBuilder<T> {
 
@@ -25,15 +30,13 @@ public class WeightFailoverBuilder<T> {
     private static final int DEFAULT_INIT_WEIGHT = 100;
     private static final int DEFAULT_FAIL_REDUCE_WEIGHT = 5;
     private static final int DEFAULT_SUCCESS_INCREASE_WEIGHT = 1;
-    private static final int DEFAULT_RECOVERED_INIT_WEIGHT = 1;
     private static final long DEFAULT_CHECK_DURATION = SECONDS.toMillis(1);
 
     IntUnaryOperator failReduceWeight;
     IntUnaryOperator successIncreaseWeight;
-    IntUnaryOperator recoveredInitWeight;
 
     Map<T, Integer> initWeightMap;
-    Predicate<T> checker;
+    ToDoubleFunction<T> checker;
     long checkDuration;
     Consumer<T> onMinWeight;
     Consumer<T> onRecovered;
@@ -102,20 +105,6 @@ public class WeightFailoverBuilder<T> {
     }
 
     @CheckReturnValue
-    public WeightFailoverBuilder<T> recoveredInitRate(double rate) {
-        checkArgument(rate > 0 && rate <= 1);
-        recoveredInitWeight = i -> Math.max(1, (int) (rate * i));
-        return this;
-    }
-
-    @CheckReturnValue
-    public WeightFailoverBuilder<T> recoveredInit(int weight) {
-        checkArgument(weight > 0);
-        recoveredInitWeight = i -> weight;
-        return this;
-    }
-
-    @CheckReturnValue
     public WeightFailoverBuilder<T> checkDuration(long time, TimeUnit unit) {
         checkNotNull(unit);
         checkArgument(time > 0);
@@ -125,18 +114,29 @@ public class WeightFailoverBuilder<T> {
 
     @SuppressWarnings("unchecked")
     @CheckReturnValue
-    public <E> WeightFailoverBuilder<E> checker(Predicate<? super E> failChecker) {
+    public <E> WeightFailoverBuilder<E>
+            checker(@Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker) {
         checkNotNull(failChecker);
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
         thisBuilder.checker = t -> {
             try {
-                return failChecker.test(t);
+                return failChecker.apply(t);
             } catch (Throwable e) {
                 logger.error("", e);
-                return false;
+                return 0;
             }
         };
         return thisBuilder;
+    }
+
+    @SuppressWarnings("unchecked")
+    @CheckReturnValue
+    public <E> WeightFailoverBuilder<E> checker(
+            @Nonnull ThrowablePredicate<? super E, Throwable> failChecker,
+            @Nonnegative double recoveredInitRate) {
+        checkArgument(recoveredInitRate >= 0 && recoveredInitRate <= 1);
+        checkNotNull(failChecker);
+        return checker(it -> failChecker.test(it) ? recoveredInitRate : 0);
     }
 
     public <E> WeightFailover<E> build(Collection<? extends E> original) {
@@ -169,9 +169,6 @@ public class WeightFailoverBuilder<T> {
         }
         if (successIncreaseWeight == null) {
             successIncreaseWeight = i -> DEFAULT_SUCCESS_INCREASE_WEIGHT;
-        }
-        if (recoveredInitWeight == null) {
-            recoveredInitWeight = i -> DEFAULT_RECOVERED_INIT_WEIGHT;
         }
         if (checkDuration == 0) {
             checkDuration = DEFAULT_CHECK_DURATION;

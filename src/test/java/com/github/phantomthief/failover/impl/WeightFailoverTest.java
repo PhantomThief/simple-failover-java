@@ -2,8 +2,11 @@ package com.github.phantomthief.failover.impl;
 
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import static java.lang.System.currentTimeMillis;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.function.Function.identity;
+import static java.util.stream.Collectors.toMap;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -14,12 +17,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.Failover;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
+import com.google.common.collect.TreeMultiset;
 
 /**
  * @author w.vela
@@ -139,6 +144,30 @@ class WeightFailoverTest {
         assertEquals(0, failover.currentWeight("s2"));
         sleepUninterruptibly(2, SECONDS);
         assertEquals(1, failover.currentWeight("s2"));
+    }
+
+    @Test
+    void testPerf() {
+        Map<String, Integer> map = IntStream.range(1, 10).boxed()
+                .collect(toMap(it -> "s" + it, identity()));
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
+                .checker(it -> 1.0) //
+                .build(map);
+        long s = currentTimeMillis();
+        Multiset<String> counter = TreeMultiset.create();
+        for (int i = 0; i < 100000; i++) {
+            List<String> available = failover.getAvailable(2);
+            counter.addAll(available);
+        }
+        // old 260~270
+        System.out.println(counter + ", cost:" + (currentTimeMillis() - s));
+        s = currentTimeMillis();
+        counter = TreeMultiset.create();
+        for (int i = 0; i < 100000; i++) {
+            counter.add(failover.getOneAvailable());
+        }
+        // old 60~70
+        System.out.println(counter + ", cost:" + (currentTimeMillis() - s));
     }
 
     private boolean check(String test) {

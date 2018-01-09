@@ -1,5 +1,6 @@
 package com.github.phantomthief.failover.impl;
 
+import static com.github.phantomthief.tuple.Tuple.tuple;
 import static com.github.phantomthief.util.MoreSuppliers.lazy;
 import static com.google.common.primitives.Ints.constrainToRange;
 import static java.lang.Integer.MAX_VALUE;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -30,6 +32,7 @@ import org.slf4j.Logger;
 
 import com.github.phantomthief.failover.Failover;
 import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
+import com.github.phantomthief.tuple.TwoTuple;
 import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
 
 /**
@@ -199,6 +202,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public T getOneAvailable() {
+        // TODO better using a snapshot current Weight<T> or a new stateful Weight<T>
         List<T> available = getAvailable(1);
         return available.isEmpty() ? null : available.get(0);
     }
@@ -214,29 +218,35 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     }
 
     private List<T> getAvailable(int n, Collection<T> exclusions) {
-        Map<T, Integer> snapshot = new HashMap<>(currentWeightMap);
+        List<TwoTuple<T, Integer>> snapshot = new LinkedList<>();
+        int sum = 0;
+        for (Entry<T, Integer> entry : currentWeightMap.entrySet()) {
+            int thisWeight = entry.getValue();
+            snapshot.add(tuple(entry.getKey(), thisWeight));
+            sum += thisWeight;
+        }
         List<T> result = new ArrayList<>();
-        for (int i = 0; i < n; i++) {
-            if (snapshot.isEmpty()) {
-                break;
-            }
-            int sum = snapshot.values().stream().mapToInt(Integer::intValue).sum();
-            if (sum == 0) {
-                break;
-            }
-            int left = ThreadLocalRandom.current().nextInt(sum);
-            Iterator<Entry<T, Integer>> iterator = snapshot.entrySet().iterator();
-            while (iterator.hasNext()) {
-                Entry<T, Integer> candidate = iterator.next();
-                if (left < candidate.getValue()) {
-                    T obj = candidate.getKey();
-                    if (!exclusions.contains(obj)) {
-                        result.add(obj);
-                    }
-                    iterator.remove();
+        if (sum > 0) {
+            for (int i = 0; i < n; i++) {
+                if (snapshot.isEmpty() || sum == 0) {
                     break;
                 }
-                left -= candidate.getValue();
+                int left = ThreadLocalRandom.current().nextInt(sum);
+                Iterator<TwoTuple<T, Integer>> iterator = snapshot.iterator();
+                while (iterator.hasNext()) {
+                    TwoTuple<T, Integer> candidate = iterator.next();
+                    int entryWeight = candidate.getSecond();
+                    if (left < entryWeight) {
+                        T obj = candidate.getFirst();
+                        if (!exclusions.contains(obj)) {
+                            result.add(obj);
+                        }
+                        iterator.remove();
+                        sum -= entryWeight;
+                        break;
+                    }
+                    left -= entryWeight;
+                }
             }
         }
         return result;

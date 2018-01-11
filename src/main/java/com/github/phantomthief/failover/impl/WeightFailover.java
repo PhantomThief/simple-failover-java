@@ -163,6 +163,9 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                     onMinWeight.accept(object);
                 }
             }
+            if (result == 0) {
+                logger.warn("found down object:{}", k);
+            }
             return result;
         });
         recoveryFuture.get();
@@ -189,6 +192,9 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 if (result != oldValue) {
                     onMinWeight.accept(object);
                 }
+            }
+            if (result == 0) {
+                logger.warn("found down object:{}", k);
             }
             return result;
         });

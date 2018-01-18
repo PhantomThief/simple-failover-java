@@ -42,6 +42,14 @@ public class WeightFailoverBuilder<T> {
     Consumer<T> onRecovered;
     int minWeight = 0;
     Integer weightOnMissingNode;
+    String name;
+
+    @CheckReturnValue
+    public <E> WeightFailoverBuilder<E> name(String value) {
+        this.name = value;
+        WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
+        return thisBuilder;
+    }
 
     @CheckReturnValue
     public <E> WeightFailoverBuilder<E> autoAddOnMissing(int weight) {

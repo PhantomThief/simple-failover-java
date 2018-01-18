@@ -24,6 +24,12 @@ public class GenericWeightFailoverBuilder<E> {
     }
 
     @CheckReturnValue
+    public GenericWeightFailoverBuilder<E> name(String value) {
+        builder.name(value);
+        return this;
+    }
+
+    @CheckReturnValue
     public GenericWeightFailoverBuilder<E> autoAddOnMissing(int weight) {
         builder.autoAddOnMissing(weight);
         return this;

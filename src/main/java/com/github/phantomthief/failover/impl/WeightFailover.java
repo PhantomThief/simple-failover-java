@@ -76,6 +76,11 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                         tryCloseRecoveryScheduler();
                         return;
                     }
+                    Thread currentThread = Thread.currentThread();
+                    String origName = currentThread.getName();
+                    if (builder.name != null) {
+                        currentThread.setName(origName + "-[" + builder.name + "]");
+                    }
                     try {
                         Map<T, Double> recoveredObjects = new HashMap<>();
                         this.currentWeightMap.forEach((obj, weight) -> {
@@ -103,6 +108,8 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                         });
                     } catch (Throwable e) {
                         logger.error("", e);
+                    } finally {
+                        currentThread.setName(origName);
                     }
                 }, builder.checkDuration, builder.checkDuration, MILLISECONDS));
     }

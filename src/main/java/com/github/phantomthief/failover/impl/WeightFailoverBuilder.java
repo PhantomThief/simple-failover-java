@@ -171,7 +171,9 @@ public class WeightFailoverBuilder<T> {
     }
 
     private void ensure() {
-        checkNotNull(checker);
+        if (minWeight <= 0) { // if min weight>0, there is no checker need.
+            checkNotNull(checker);
+        }
         if (failReduceWeight == null) {
             failReduceWeight = i -> DEFAULT_FAIL_REDUCE_WEIGHT;
         }

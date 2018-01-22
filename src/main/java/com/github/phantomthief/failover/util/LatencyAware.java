@@ -28,6 +28,8 @@ import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
 /**
+ * use {@link ConcurrencyAware} instead
+ *
  * @author w.vela
  */
 @Deprecated

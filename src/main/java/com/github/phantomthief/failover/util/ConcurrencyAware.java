@@ -6,7 +6,6 @@ import static com.google.common.collect.Multimaps.asMap;
 import static com.google.common.collect.Multimaps.newListMultimap;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -15,6 +14,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
 
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,13 +48,20 @@ public class ConcurrencyAware<T> {
         return create((b, i) -> i);
     }
 
-    @Nonnull
-    private T selectIdlest(Collection<T> candidates) {
-        ListMultimap<Integer, T> map = newListMultimap(new TreeMap<>(), ArrayList::new);
-        candidates.forEach(obj -> {
+    @Nullable
+    private T selectIdlest(@Nonnull Iterable<T> candidates) {
+        checkNotNull(candidates);
+        ListMultimap<Integer, T> map = null;
+        for (T obj : candidates) {
             int c = concurrency.getOrDefault(obj, 0);
+            if (map == null) {
+                map = newListMultimap(new TreeMap<>(), ArrayList::new);
+            }
             map.put(concurrencyEvaluator.apply(obj, c), obj);
-        });
+        }
+        if (map == null) {
+            return null;
+        }
         NavigableMap<Integer, List<T>> asMap = (NavigableMap<Integer, List<T>>) asMap(map);
         T result = getRandom(asMap.firstEntry().getValue());
         assert result != null;
@@ -64,7 +71,7 @@ public class ConcurrencyAware<T> {
     /**
      * @throws X, or {@link NoAvailableResourceException} if candidates is empty
      */
-    public <X extends Throwable> void run(Collection<T> candidates, ThrowableConsumer<T, X> func)
+    public <X extends Throwable> void run(Iterable<T> candidates, ThrowableConsumer<T, X> func)
             throws X {
         supply(candidates, it -> {
             func.accept(it);
@@ -75,7 +82,7 @@ public class ConcurrencyAware<T> {
     /**
      * @throws X, or {@link NoAvailableResourceException} if candidates is empty
      */
-    public <E, X extends Throwable> E supply(Collection<T> candidates,
+    public <E, X extends Throwable> E supply(@Nonnull Iterable<T> candidates,
             ThrowableFunction<T, E, X> func) throws X {
         T obj = begin(candidates);
         try {
@@ -87,12 +94,13 @@ public class ConcurrencyAware<T> {
 
     /**
      * better use {@link #supply} or {@link #run} unless need to control begin and end in special situations.
+     * @throws NoAvailableResourceException if candidates is empty
      */
-    public T begin(Collection<T> candidates) {
-        if (candidates.isEmpty()) {
+    public T begin(@Nonnull Iterable<T> candidates) {
+        T obj = selectIdlest(candidates);
+        if (obj == null) {
             throw new NoAvailableResourceException();
         }
-        T obj = selectIdlest(candidates);
         concurrency.merge(obj, 1, Integer::sum);
         return obj;
     }

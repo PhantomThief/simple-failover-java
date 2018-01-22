@@ -71,8 +71,9 @@ public class ConcurrencyAware<T> {
     /**
      * @throws X, or {@link NoAvailableResourceException} if candidates is empty
      */
-    public <X extends Throwable> void run(Iterable<T> candidates, ThrowableConsumer<T, X> func)
-            throws X {
+    public <X extends Throwable> void run(@Nonnull Iterable<T> candidates,
+            @Nonnull ThrowableConsumer<T, X> func) throws X {
+        checkNotNull(func);
         supply(candidates, it -> {
             func.accept(it);
             return null;
@@ -83,7 +84,8 @@ public class ConcurrencyAware<T> {
      * @throws X, or {@link NoAvailableResourceException} if candidates is empty
      */
     public <E, X extends Throwable> E supply(@Nonnull Iterable<T> candidates,
-            ThrowableFunction<T, E, X> func) throws X {
+            @Nonnull ThrowableFunction<T, E, X> func) throws X {
+        checkNotNull(func);
         T obj = begin(candidates);
         try {
             return func.apply(obj);
@@ -106,6 +108,7 @@ public class ConcurrencyAware<T> {
     }
 
     /**
+     * @param obj from {@link #begin}'s return
      * see {@link #begin}
      */
     public void end(@Nonnull T obj) {

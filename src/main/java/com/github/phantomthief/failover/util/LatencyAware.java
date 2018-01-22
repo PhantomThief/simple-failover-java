@@ -30,6 +30,7 @@ import com.google.common.cache.LoadingCache;
 /**
  * @author w.vela
  */
+@Deprecated
 public class LatencyAware<T> {
 
     private static final long DEFAULT_INIT_LATENCY = 1;

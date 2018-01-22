@@ -6,14 +6,21 @@
 
     <properties>
         <more-lambdas.version>0.1.12</more-lambdas.version>
+        <slf4j-api.version>1.7.14</slf4j-api.version>
+        <guava.version>21.0</guava.version>
+        <jsr305.version>3.0.2</jsr305.version>
+        <stats-helper.version>0.2.1</stats-helper.version>
 
         <junit-jupiter.version>5.0.2</junit-jupiter.version>
         <junit-platform.version>1.0.2</junit-platform.version>
 
         <maven-surefire-plugin.version>2.19.1</maven-surefire-plugin.version>
         <nexus-staging-maven-plugin.version>1.6.8</nexus-staging-maven-plugin.version>
-        <jacoco-maven-plugin.version>0.7.9</jacoco-maven-plugin.version>
+        <jacoco-maven-plugin.version>0.8.0</jacoco-maven-plugin.version>
         <coveralls-maven-plugin.version>4.3.0</coveralls-maven-plugin.version>
+        <maven-javadoc-plugin.version>3.0.0</maven-javadoc-plugin.version>
+        <maven-source-plugin.version>3.0.1</maven-source-plugin.version>
+        <maven-compiler-plugin.version>3.7.0</maven-compiler-plugin.version>
     </properties>
 
     <parent>
@@ -52,28 +59,29 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.14</version>
+            <version>${slf4j-api.version}</version>
         </dependency>
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>21.0</version>
-        </dependency>
-        <dependency>
-            <groupId>com.github.phantomthief</groupId>
-            <artifactId>stats-helper</artifactId>
-            <version>0.2.1</version>
+            <version>${guava.version}</version>
         </dependency>
         <dependency>
             <groupId>com.github.phantomthief</groupId>
             <artifactId>more-lambdas</artifactId>
             <version>${more-lambdas.version}</version>
         </dependency>
+        <!-- TODO: to be removed -->
+        <dependency>
+            <groupId>com.github.phantomthief</groupId>
+            <artifactId>stats-helper</artifactId>
+            <version>${stats-helper.version}</version>
+        </dependency>
 
         <dependency>
             <groupId>com.google.code.findbugs</groupId>
             <artifactId>jsr305</artifactId>
-            <version>3.0.2</version>
+            <version>${jsr305.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -90,7 +98,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.5</version>
+                <version>${maven-compiler-plugin.version}</version>
                 <configuration>
                     <source>1.8</source>
                     <target>1.8</target>
@@ -106,7 +114,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>2.4</version>
+                <version>${maven-source-plugin.version}</version>
                 <executions>
                     <execution>
                         <id>attach-sources</id>
@@ -119,7 +127,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>2.10.2</version>
+                <version>${maven-javadoc-plugin.version}</version>
                 <configuration>
                     <additionalparam>-Xdoclint:none</additionalparam>
                 </configuration>

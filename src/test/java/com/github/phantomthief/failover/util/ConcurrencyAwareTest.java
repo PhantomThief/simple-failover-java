@@ -30,10 +30,7 @@ class ConcurrencyAwareTest {
         List<String> all = ImmutableList.of("t1", "t2", "t3");
         ConcurrencyAware<String> aware = ConcurrencyAware.create();
         for (int i = 0; i < 1000; i++) {
-            assertTrue(all.contains(aware.supply(all, it -> {
-                System.out.println("select:" + it);
-                return it;
-            })));
+            assertTrue(all.contains(aware.supply(all, it -> it)));
         }
         for (int i = 0; i < 1000; i++) {
             checkIdlest(all, aware);

@@ -31,8 +31,8 @@ import com.google.common.collect.ListMultimap;
 public class ConcurrencyAware<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(ConcurrencyAware.class);
-    private final Map<T, Integer> concurrency = new ConcurrentHashMap<>();
 
+    private final Map<T, Integer> concurrency = new ConcurrentHashMap<>();
     private final BiFunction<T, Integer, Integer> concurrencyEvaluator;
 
     private ConcurrencyAware(@Nonnull BiFunction<T, Integer, Integer> concurrencyEvaluator) {
@@ -109,13 +109,12 @@ public class ConcurrencyAware<T> {
 
     /**
      * @param obj from {@link #begin}'s return
-     * see {@link #begin}
+     * @see #begin
      */
     public void end(@Nonnull T obj) {
-        concurrency.compute(obj, (oldKey, oldValue) -> {
+        concurrency.compute(obj, (thisKey, oldValue) -> {
             if (oldValue == null) {
-                logger.warn("illegal state found for concurrency aware:{}, old value is null.",
-                        this);
+                logger.warn("illegal state found, obj:{}", thisKey);
                 return null;
             }
             int result = oldValue - 1;

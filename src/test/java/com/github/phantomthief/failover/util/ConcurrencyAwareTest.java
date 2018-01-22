@@ -1,6 +1,7 @@
 package com.github.phantomthief.failover.util;
 
 import static java.util.Map.Entry;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -40,12 +41,13 @@ class ConcurrencyAwareTest {
         for (int i = 0; i < 1000; i++) {
             List<CountDownLatch> countDownLatches1 = new ArrayList<>();
             List<CountDownLatch> countDownLatches2 = new ArrayList<>();
+            List<Thread> threads = new ArrayList<>();
             for (int j = 0; j < 4; j++) {
                 CountDownLatch c1 = new CountDownLatch(1);
                 countDownLatches1.add(c1);
                 CountDownLatch c2 = new CountDownLatch(1);
                 countDownLatches2.add(c2);
-                new Thread(() -> { //
+                Thread thread = new Thread(() -> { //
                     try {
                         aware.run(all, it -> {
                             concurrency.merge(it, 1, Integer::sum);
@@ -56,7 +58,9 @@ class ConcurrencyAwareTest {
                     } catch (InterruptedException e) {
                         Thread.currentThread().interrupt();
                     }
-                }).start();
+                });
+                threads.add(thread);
+                thread.start();
             }
             for (CountDownLatch c1 : countDownLatches1) {
                 c1.await();
@@ -69,6 +73,10 @@ class ConcurrencyAwareTest {
             for (CountDownLatch c2 : countDownLatches2) {
                 c2.countDown();
             }
+            for (Thread thread : threads) {
+                thread.join();
+            }
+            concurrency.values().forEach(it -> assertEquals(0, it.intValue()));
         }
 
         assertThrows(NoAvailableResourceException.class,

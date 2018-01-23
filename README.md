@@ -1,4 +1,4 @@
-simple-failover-java [![Build Status](https://travis-ci.org/PhantomThief/simple-failover-java.svg)](https://travis-ci.org/PhantomThief/simple-failover-java)
+simple-failover-java [![Build Status](https://travis-ci.org/PhantomThief/simple-failover-java.svg)](https://travis-ci.org/PhantomThief/simple-failover-java) [![Coverage Status](https://coveralls.io/repos/PhantomThief/simple-failover-java/badge.svg?branch=master)](https://coveralls.io/r/PhantomThief/simple-failover-java?branch=master)
 =======================
 
 A simple failover library for Java

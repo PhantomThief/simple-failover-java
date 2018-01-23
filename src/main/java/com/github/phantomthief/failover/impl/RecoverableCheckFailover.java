@@ -33,6 +33,7 @@ import com.google.common.collect.EvictingQueue;
  * 
  * @author w.vela
  */
+@Deprecated
 public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
 
     private static Logger logger = getLogger(RecoverableCheckFailover.class);

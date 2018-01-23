@@ -9,6 +9,7 @@ import javax.annotation.CheckReturnValue;
 /**
  * @author w.vela
  */
+@Deprecated
 public class GenericRecoverableCheckFailoverBuilder<E> {
 
     private final RecoverableCheckFailoverBuilder<Object> builder;

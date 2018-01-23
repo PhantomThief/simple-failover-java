@@ -13,6 +13,7 @@ import javax.annotation.CheckReturnValue;
 
 import org.slf4j.Logger;
 
+@Deprecated
 public final class RecoverableCheckFailoverBuilder<T> {
 
     private static final int DEFAULT_FAIL_COUNT = 10;

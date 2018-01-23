@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.NoSuchElementException;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiFunction;
@@ -19,7 +20,6 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.github.phantomthief.failover.exception.NoAvailableResourceException;
 import com.github.phantomthief.util.ThrowableConsumer;
 import com.github.phantomthief.util.ThrowableFunction;
 import com.google.common.collect.ListMultimap;
@@ -69,7 +69,7 @@ public class ConcurrencyAware<T> {
     }
 
     /**
-     * @throws X, or {@link NoAvailableResourceException} if candidates is empty
+     * @throws X, or {@link NoSuchElementException} if candidates is empty
      */
     public <X extends Throwable> void run(@Nonnull Iterable<T> candidates,
             @Nonnull ThrowableConsumer<T, X> func) throws X {
@@ -81,7 +81,7 @@ public class ConcurrencyAware<T> {
     }
 
     /**
-     * @throws X, or {@link NoAvailableResourceException} if candidates is empty
+     * @throws X, or {@link NoSuchElementException} if candidates is empty
      */
     public <E, X extends Throwable> E supply(@Nonnull Iterable<T> candidates,
             @Nonnull ThrowableFunction<T, E, X> func) throws X {
@@ -96,12 +96,12 @@ public class ConcurrencyAware<T> {
 
     /**
      * better use {@link #supply} or {@link #run} unless need to control begin and end in special situations.
-     * @throws NoAvailableResourceException if candidates is empty
+     * @throws NoSuchElementException if candidates is empty
      */
     public T begin(@Nonnull Iterable<T> candidates) {
         T obj = selectIdlest(candidates);
         if (obj == null) {
-            throw new NoAvailableResourceException();
+            throw new NoSuchElementException();
         }
         concurrency.merge(obj, 1, Integer::sum);
         return obj;

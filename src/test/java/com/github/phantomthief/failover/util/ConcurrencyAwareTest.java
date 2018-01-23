@@ -11,13 +11,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.junit.jupiter.api.Test;
 
-import com.github.phantomthief.failover.exception.NoAvailableResourceException;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -79,7 +79,7 @@ class ConcurrencyAwareTest {
             concurrency.values().forEach(it -> assertEquals(0, it.intValue()));
         }
 
-        assertThrows(NoAvailableResourceException.class,
+        assertThrows(NoSuchElementException.class,
                 () -> aware.supply(Collections.emptyList(), it -> it));
     }
 

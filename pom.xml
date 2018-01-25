@@ -9,7 +9,6 @@
         <slf4j-api.version>1.7.14</slf4j-api.version>
         <guava.version>21.0</guava.version>
         <jsr305.version>3.0.2</jsr305.version>
-        <stats-helper.version>0.2.1</stats-helper.version>
 
         <junit-jupiter.version>5.0.2</junit-jupiter.version>
         <junit-platform.version>1.0.2</junit-platform.version>
@@ -70,12 +69,6 @@
             <groupId>com.github.phantomthief</groupId>
             <artifactId>more-lambdas</artifactId>
             <version>${more-lambdas.version}</version>
-        </dependency>
-        <!-- TODO: to be removed -->
-        <dependency>
-            <groupId>com.github.phantomthief</groupId>
-            <artifactId>stats-helper</artifactId>
-            <version>${stats-helper.version}</version>
         </dependency>
 
         <dependency>

@@ -16,19 +16,20 @@ import javax.annotation.Nonnull;
  * @author w.vela
  * Created on 2018-02-26.
  */
-class RandomIterator<T> implements Iterator<T> {
+class LcgRandomIterator<T> implements Iterator<T> {
 
     private static final int c = 11;
     private static final long a = 25214903917L;
 
     private final List<T> original;
-    private long seed;
-    private long n;
-    private long m;
+    private final long seed;
+    private final long m;
+    private final long n;
+
     private long next;
     private boolean hasNext = true;
 
-    RandomIterator(@Nonnull List<T> original) {
+    LcgRandomIterator(@Nonnull List<T> original) {
         if (!(original instanceof RandomAccess)) {
             throw new IllegalArgumentException();
         }

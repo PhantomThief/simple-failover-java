@@ -37,7 +37,7 @@ public class RandomListUtils {
         }
         if (source instanceof List && source instanceof RandomAccess
                 && size < source.size() / LCG_THRESHOLD) {
-            return getRandomUsingLcg(source, size);
+            return getRandomUsingLcg((List<T>) source, size);
         } else {
             return getRandomUsingShuffle(source, size);
         }
@@ -49,10 +49,10 @@ public class RandomListUtils {
         return newList.subList(0, min(newList.size(), size));
     }
 
-    static <T> List<T> getRandomUsingLcg(Collection<T> source, int size) {
+    static <T> List<T> getRandomUsingLcg(List<T> source, int size) {
         int targetSize = min(source.size(), size);
         List<T> newList = new ArrayList<>(targetSize);
-        RandomIterator<T> iterator = new RandomIterator<>((List<T>) source);
+        LcgRandomIterator<T> iterator = new LcgRandomIterator<>(source);
         for (int i = 0; i < targetSize; i++) {
             newList.add(iterator.next());
         }

@@ -27,7 +27,7 @@ class RandomListUtilsTest {
         long lcgBetter = 0, shuffleBetter = 0;
         for (int i = 0; i < 1000; i++) {
             int size = ThreadLocalRandom.current().nextInt(1, 10000);
-            int retrieved = ThreadLocalRandom.current().nextInt(1, size / 3);
+            int retrieved = ThreadLocalRandom.current().nextInt(1, Math.max(2, size / 3));
             List<Integer> list = IntStream.range(0, size).boxed().collect(toList());
 
             long s = nanoTime();

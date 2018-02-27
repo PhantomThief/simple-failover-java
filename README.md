@@ -11,7 +11,7 @@ A simple failover library for Java
 <dependency>
     <groupId>com.github.phantomthief</groupId>
     <artifactId>simple-failover</artifactId>
-    <version>0.1.10</version>
+    <version>0.1.11</version>
 </dependency>
 ```
 

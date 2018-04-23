@@ -2,9 +2,15 @@ package com.github.phantomthief.failover.util;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Predicates.alwaysTrue;
+import static com.google.common.base.Throwables.getRootCause;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
+import java.net.ConnectException;
+import java.net.MalformedURLException;
+import java.net.NoRouteToHostException;
+import java.net.SocketTimeoutException;
+import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -117,5 +123,31 @@ public class FailoverUtils {
             func.accept(t);
             return null;
         }, failChecker);
+    }
+
+    public static boolean isHostUnavailable(Throwable t) {
+        Throwable rootCause = getRootCause(t);
+        if (rootCause instanceof NoRouteToHostException) {
+            return true;
+        }
+        if (rootCause instanceof UnknownHostException) {
+            return false;
+        }
+        if (rootCause instanceof MalformedURLException) {
+            return false;
+        }
+        if (rootCause instanceof ConnectException) {
+            if (rootCause.getMessage() != null
+                    && rootCause.getMessage().contains("Connection refused")) {
+                return true;
+            }
+        }
+        if (rootCause instanceof SocketTimeoutException) {
+            if (rootCause.getMessage() != null
+                    && rootCause.getMessage().contains("connect timed out")) {
+                return true;
+            }
+        }
+        return false;
     }
 }

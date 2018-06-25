@@ -8,6 +8,7 @@ import java.nio.channels.CompletionHandler;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Supplier;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
@@ -52,10 +53,12 @@ public class SimplePortChecker {
 
     @Nonnull
     public static ListenableFuture<Void> asyncCheck(@Nonnull String host, @Nonnegative int port) {
-        CheckListenableFuture future = new CheckListenableFuture();
+        AsynchronousSocketChannel[] channels = { null };
+        CheckListenableFuture future = new CheckListenableFuture(() -> channels[0]);
         try {
             InetSocketAddress hostAddress = new InetSocketAddress(host, port);
             AsynchronousSocketChannel client = AsynchronousSocketChannel.open();
+            channels[0] = client;
             client.connect(hostAddress, null, new CompletionHandler<Void, Object>() {
 
                 @Override
@@ -87,6 +90,12 @@ public class SimplePortChecker {
 
     private static class CheckListenableFuture extends AbstractFuture<Void> {
 
+        private final Supplier<AsynchronousSocketChannel> client;
+
+        private CheckListenableFuture(Supplier<AsynchronousSocketChannel> client) {
+            this.client = client;
+        }
+
         @Override
         protected boolean set(@Nullable Void value) {
             return super.set(value);
@@ -104,6 +113,14 @@ public class SimplePortChecker {
                 return super.get(timeout, unit);
             } catch (TimeoutException e) {
                 cancel(true);
+                AsynchronousSocketChannel channel = client.get();
+                if (channel != null) {
+                    try {
+                        channel.close();
+                    } catch (IOException e1) {
+                        logger.error("", e1);
+                    }
+                }
                 throw e;
             }
         }

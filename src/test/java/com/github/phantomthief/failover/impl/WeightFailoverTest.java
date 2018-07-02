@@ -7,7 +7,9 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
+import static org.apache.commons.math3.stat.inference.AlternativeHypothesis.TWO_SIDED;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -19,6 +21,7 @@ import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.IntStream;
 
+import org.apache.commons.math3.stat.inference.BinomialTest;
 import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.Failover;
@@ -103,21 +106,31 @@ class WeightFailoverTest {
     @Test
     void testLarge() {
         Map<String, Integer> map = new HashMap<>();
+        double sum = 0;
+        double iSum = 0;
         for (int i = 0; i < 108; i++) {
-            map.put("i" + i, 32518);
+            int iWeight = 32518;
+            map.put("i" + i, iWeight);
+            iSum += iWeight;
+            sum += iWeight;
         }
         for (int i = 0; i < 331; i++) {
-            map.put("j" + i, 2652);
+            int jWeight = 2652;
+            map.put("j" + i, jWeight);
+            sum += jWeight;
         }
         WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
                 .checker(it -> true, 1) //
                 .build(map);
         Multiset<String> counter = HashMultiset.create();
-        for (int i = 0; i < 100000; i++) {
+        int trials = 100000;
+        for (int i = 0; i < trials; i++) {
             String oneAvailable = failover.getOneAvailable();
             counter.add(oneAvailable.substring(0, 1));
         }
         System.out.println(counter);
+        assertFalse(new BinomialTest().binomialTest(trials, counter.count("i"), iSum / sum,
+                TWO_SIDED, 0.01));
     }
 
     @Test

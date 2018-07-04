@@ -1,11 +1,16 @@
 package com.github.phantomthief.failover.util;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.junit.jupiter.api.Test;
+
+import com.github.phantomthief.failover.util.SharedResource.UnregisterFailedException;
 
 /**
  * @author w.vela
@@ -17,31 +22,47 @@ class SharedResourceTest {
 
     @Test
     void test() {
-        resources.register("1", MockResource::new);
-        resources.register("1", MockResource::new);
+        MockResource mock=resources.register("1", MockResource::new);
+        assertSame(mock,resources.get("1"));
+        assertSame(mock, resources.register("1", MockResource::new));
         resources.register("2", MockResource::new);
 
         MockResource mockResource1 = resources.get("1");
         MockResource mockResource2 = resources.get("1");
-        assertTrue(mockResource1 == mockResource2);
+        assertNotNull(mockResource1);
+        assertSame(mockResource1, mockResource2);
         assertFalse(mockResource1.isShutdown());
 
         resources.unregister("1", MockResource::close);
         mockResource1 = resources.get("1");
+        assertNotNull(mockResource1);
         assertFalse(mockResource1.isShutdown());
 
         resources.unregister("1", MockResource::close);
         assertTrue(mockResource1.isShutdown());
         mockResource1 = resources.get("1");
-        assertTrue(mockResource1 == null);
+        assertNull(mockResource1);
     }
 
     @Test
     void testUnpairUnregister() {
         resources.register("3", MockResource::new);
-        resources.unregister("3", MockResource::close);
+        MockResource mock = resources.get("3");
+        assertSame(mock, resources.unregister("3", MockResource::close));
         assertThrows(IllegalStateException.class,
                 () -> resources.unregister("3", MockResource::close));
+    }
+
+    @Test
+    void testCleanupFailed() {
+        resources.register("4", MockResource::new);
+        MockResource mock = resources.get("4");
+        UnregisterFailedException e = assertThrows(UnregisterFailedException.class,
+                () -> resources.unregister("4", it -> {
+                    throw new IllegalArgumentException();
+                }));
+        assertSame(mock, e.getRemoved());
+        assertSame(IllegalArgumentException.class, e.getCause().getClass());
     }
 
     private static class MockResource {

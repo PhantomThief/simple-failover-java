@@ -1,6 +1,5 @@
 package com.github.phantomthief.failover.util;
 
-import static com.google.common.base.Throwables.throwIfUnchecked;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -8,6 +7,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 import javax.annotation.concurrent.GuardedBy;
 
 import org.slf4j.Logger;
@@ -34,7 +35,8 @@ public class SharedResource<K, V> {
     @GuardedBy("lock")
     private final ConcurrentMap<K, AtomicInteger> counters = new ConcurrentHashMap<>();
 
-    public V register(K key, Function<K, V> factory) {
+    @Nonnull
+    public V register(@Nonnull K key, @Nonnull Function<K, V> factory) {
         synchronized (lock) {
             V v = resources.computeIfAbsent(key, factory);
             counters.computeIfAbsent(key, k -> new AtomicInteger(0)).incrementAndGet();
@@ -42,11 +44,17 @@ public class SharedResource<K, V> {
         }
     }
 
-    public V get(K key) {
+    @Nullable
+    public V get(@Nonnull K key) {
         return resources.get(key);
     }
 
-    public V unregister(K key, ThrowableConsumer<V, Throwable> cleanup) {
+    /**
+     * @throws UnregisterFailedException if specified cleanup function failed to run.
+     * @throws IllegalStateException if there is a illegal state found.(e.g. non paired call unregister)
+     */
+    @Nonnull
+    public V unregister(@Nonnull K key, @Nonnull ThrowableConsumer<V, Throwable> cleanup) {
         synchronized (lock) {
             AtomicInteger counter = counters.get(key);
             if (counter == null) {
@@ -55,7 +63,7 @@ public class SharedResource<K, V> {
             int count = counter.decrementAndGet();
 
             if (count < 0) { // impossible run into here
-                throw new IllegalStateException("INVALID INTERNAL STATE:" + key);
+                throw new AssertionError("INVALID INTERNAL STATE:" + key);
             } else if (count > 0) { // wait others to unregister
                 return resources.get(key);
             } else { // count == 0
@@ -65,11 +73,25 @@ public class SharedResource<K, V> {
                     cleanup.accept(removed);
                     logger.info("cleanup resource:{}->{}", key, removed);
                 } catch (Throwable e) {
-                    throwIfUnchecked(e);
-                    throw new RuntimeException(e);
+                    throw new UnregisterFailedException(e, removed);
                 }
                 return removed;
             }
+        }
+    }
+
+    public static class UnregisterFailedException extends RuntimeException {
+
+        private final Object removed;
+
+        private UnregisterFailedException(Throwable cause, Object removed) {
+            super(cause);
+            this.removed = removed;
+        }
+
+        @SuppressWarnings("unchecked")
+        public <T> T getRemoved() {
+            return (T) removed;
         }
     }
 }

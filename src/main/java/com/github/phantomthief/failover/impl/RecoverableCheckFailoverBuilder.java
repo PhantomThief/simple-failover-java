@@ -10,6 +10,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 
 import javax.annotation.CheckReturnValue;
+import javax.annotation.Nonnull;
 
 import org.slf4j.Logger;
 
@@ -27,6 +28,7 @@ public final class RecoverableCheckFailoverBuilder<T> {
     private Predicate<T> checker;
 
     @CheckReturnValue
+    @Nonnull
     public RecoverableCheckFailoverBuilder<T> setFailCount(int failCount) {
         this.failCount = failCount;
         return this;
@@ -34,6 +36,7 @@ public final class RecoverableCheckFailoverBuilder<T> {
 
     @SuppressWarnings("unchecked")
     @CheckReturnValue
+    @Nonnull
     public <E> RecoverableCheckFailoverBuilder<E> setChecker(Predicate<? super E> checker) {
         RecoverableCheckFailoverBuilder<E> thisBuilder = (RecoverableCheckFailoverBuilder<E>) this;
         thisBuilder.checker = thisBuilder.catching((Predicate<E>) checker);
@@ -41,6 +44,7 @@ public final class RecoverableCheckFailoverBuilder<T> {
     }
 
     @CheckReturnValue
+    @Nonnull
     public RecoverableCheckFailoverBuilder<T> setRecoveryCheckDuration(long recoveryCheckDuration,
             TimeUnit unit) {
         this.recoveryCheckDuration = unit.toMillis(recoveryCheckDuration);
@@ -48,12 +52,14 @@ public final class RecoverableCheckFailoverBuilder<T> {
     }
 
     @CheckReturnValue
+    @Nonnull
     public RecoverableCheckFailoverBuilder<T> setFailDuration(long failDuration, TimeUnit unit) {
         this.failDuration = unit.toMillis(failDuration);
         return this;
     }
 
     @CheckReturnValue
+    @Nonnull
     public RecoverableCheckFailoverBuilder<T>
             setReturnOriginalWhileAllFailed(boolean returnOriginalWhileAllFailed) {
         this.returnOriginalWhileAllFailed = returnOriginalWhileAllFailed;
@@ -61,6 +67,7 @@ public final class RecoverableCheckFailoverBuilder<T> {
     }
 
     @SuppressWarnings("unchecked")
+    @Nonnull
     public <E> RecoverableCheckFailover<E> build(List<? extends E> original) {
         RecoverableCheckFailoverBuilder<E> thisBuilder = (RecoverableCheckFailoverBuilder<E>) this;
         thisBuilder.ensure();

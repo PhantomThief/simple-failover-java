@@ -45,6 +45,7 @@ public class WeightFailoverBuilder<T> {
     String name;
 
     @CheckReturnValue
+    @Nonnull
     public <E> WeightFailoverBuilder<E> name(String value) {
         this.name = value;
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
@@ -52,6 +53,7 @@ public class WeightFailoverBuilder<T> {
     }
 
     @CheckReturnValue
+    @Nonnull
     public <E> WeightFailoverBuilder<E> autoAddOnMissing(int weight) {
         checkArgument(weight >= 0);
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
@@ -61,6 +63,7 @@ public class WeightFailoverBuilder<T> {
 
     @CheckReturnValue
     @SuppressWarnings("unchecked")
+    @Nonnull
     public <E> WeightFailoverBuilder<E> onMinWeight(Consumer<E> listener) {
         checkNotNull(listener);
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
@@ -70,6 +73,7 @@ public class WeightFailoverBuilder<T> {
 
     @CheckReturnValue
     @SuppressWarnings("unchecked")
+    @Nonnull
     public <E> WeightFailoverBuilder<E> onRecovered(Consumer<E> listener) {
         checkNotNull(listener);
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
@@ -78,6 +82,7 @@ public class WeightFailoverBuilder<T> {
     }
 
     @CheckReturnValue
+    @Nonnull
     public WeightFailoverBuilder<T> minWeight(int value) {
         checkArgument(value >= 0);
         this.minWeight = value;
@@ -85,6 +90,7 @@ public class WeightFailoverBuilder<T> {
     }
 
     @CheckReturnValue
+    @Nonnull
     public WeightFailoverBuilder<T> failReduceRate(double rate) {
         checkArgument(rate > 0 && rate <= 1);
         failReduceWeight = i -> Math.max(1, (int) (rate * i));
@@ -92,6 +98,7 @@ public class WeightFailoverBuilder<T> {
     }
 
     @CheckReturnValue
+    @Nonnull
     public WeightFailoverBuilder<T> failReduce(int weight) {
         checkArgument(weight > 0);
         failReduceWeight = i -> weight;
@@ -99,6 +106,7 @@ public class WeightFailoverBuilder<T> {
     }
 
     @CheckReturnValue
+    @Nonnull
     public WeightFailoverBuilder<T> successIncreaseRate(double rate) {
         checkArgument(rate > 0 && rate <= 1);
         successIncreaseWeight = i -> Math.max(1, (int) (rate * i));
@@ -106,6 +114,7 @@ public class WeightFailoverBuilder<T> {
     }
 
     @CheckReturnValue
+    @Nonnull
     public WeightFailoverBuilder<T> successIncrease(int weight) {
         checkArgument(weight > 0);
         successIncreaseWeight = i -> weight;
@@ -113,6 +122,7 @@ public class WeightFailoverBuilder<T> {
     }
 
     @CheckReturnValue
+    @Nonnull
     public WeightFailoverBuilder<T> checkDuration(long time, TimeUnit unit) {
         checkNotNull(unit);
         checkArgument(time > 0);
@@ -122,6 +132,7 @@ public class WeightFailoverBuilder<T> {
 
     @SuppressWarnings("unchecked")
     @CheckReturnValue
+    @Nonnull
     public <E> WeightFailoverBuilder<E>
             checker(@Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker) {
         checkNotNull(failChecker);
@@ -139,6 +150,7 @@ public class WeightFailoverBuilder<T> {
 
     @SuppressWarnings("unchecked")
     @CheckReturnValue
+    @Nonnull
     public <E> WeightFailoverBuilder<E> checker(
             @Nonnull ThrowablePredicate<? super E, Throwable> failChecker,
             @Nonnegative double recoveredInitRate) {
@@ -147,10 +159,12 @@ public class WeightFailoverBuilder<T> {
         return checker(it -> failChecker.test(it) ? recoveredInitRate : 0);
     }
 
+    @Nonnull
     public <E> WeightFailover<E> build(Collection<? extends E> original) {
         return build(original, DEFAULT_INIT_WEIGHT);
     }
 
+    @Nonnull
     public <E> WeightFailover<E> build(Collection<? extends E> original, int initWeight) {
         checkNotNull(original);
         checkArgument(initWeight > 0);
@@ -158,6 +172,7 @@ public class WeightFailoverBuilder<T> {
     }
 
     @SuppressWarnings("unchecked")
+    @Nonnull
     public <E> WeightFailover<E> build(Map<? extends E, Integer> original) {
         checkNotNull(original);
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;

@@ -151,12 +151,14 @@ public class ComboFailover<T> implements Failover<T>, Iterable<Failover<T>> {
         }
 
         @CheckReturnValue
+        @Nonnull
         public ComboFailoverBuilder<T> add(@Nonnull Failover<T> failover) {
             list.add(checkNotNull(failover));
             return this;
         }
 
         @CheckReturnValue
+        @Nonnull
         public ComboFailoverBuilder<T>
                 addAll(@Nonnull Collection<? extends Failover<T>> failoverList) {
             list.addAll(checkNotNull(failoverList));
@@ -164,11 +166,13 @@ public class ComboFailover<T> implements Failover<T>, Iterable<Failover<T>> {
         }
 
         @CheckReturnValue
+        @Nonnull
         public ComboFailoverBuilder<T> recheckOnMiss(boolean value) {
             recheckOnMiss = value;
             return this;
         }
 
+        @Nonnull
         public ComboFailover<T> build() {
             return new ComboFailover<>(this);
         }

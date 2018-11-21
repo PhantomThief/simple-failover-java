@@ -83,6 +83,21 @@ class ConcurrencyAwareTest {
                 () -> aware.supply(Collections.emptyList(), it -> it));
     }
 
+    @Test
+    void testIllegalStateHandler() {
+        List<String> all = ImmutableList.of("t1");
+        ConcurrencyAware<String> aware = ConcurrencyAware.create();
+        int[] called = { 0 };
+        aware.addIllegalStateHandler(t -> {
+            assertEquals(t, "t1");
+            called[0]++;
+        });
+        String begin = aware.begin(all);
+        aware.end(begin);
+        aware.end(begin);
+        assertEquals(1, called[0]);
+    }
+
     private void checkIdlest(List<String> all, ConcurrencyAware<String> aware)
             throws InterruptedException {
         AtomicReference<String> current = new AtomicReference<>();

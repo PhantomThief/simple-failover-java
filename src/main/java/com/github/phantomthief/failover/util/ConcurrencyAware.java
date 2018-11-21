@@ -108,6 +108,7 @@ public class ConcurrencyAware<T> {
     /**
      * this is a low level api, for special purpose or mock.
      */
+    @Nonnull
     public T beginWithoutRecordConcurrency(@Nonnull Iterable<T> candidates) {
         T obj = selectIdlest(candidates);
         if (obj == null) {

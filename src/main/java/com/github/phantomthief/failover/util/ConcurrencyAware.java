@@ -98,13 +98,30 @@ public class ConcurrencyAware<T> {
      * better use {@link #supply} or {@link #run} unless need to control begin and end in special situations.
      * @throws NoSuchElementException if candidates is empty
      */
+    @Nonnull
     public T begin(@Nonnull Iterable<T> candidates) {
+        T obj = beginWithoutRecordConcurrency(candidates);
+        recordBeginConcurrency(obj);
+        return obj;
+    }
+
+    /**
+     * this is a low level api, for special purpose or mock.
+     */
+    @Nonnull
+    public T beginWithoutRecordConcurrency(@Nonnull Iterable<T> candidates) {
         T obj = selectIdlest(candidates);
         if (obj == null) {
             throw new NoSuchElementException();
         }
-        concurrency.merge(obj, 1, Integer::sum);
         return obj;
+    }
+
+    /**
+     * this is a low level api, for special purpose or mock.
+     */
+    public void recordBeginConcurrency(@Nonnull T obj) {
+        concurrency.merge(obj, 1, Integer::sum);
     }
 
     /**

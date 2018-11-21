@@ -34,6 +34,8 @@ public class ConcurrencyAware<T> {
 
     private final Map<T, Integer> concurrency = new ConcurrentHashMap<>();
     private final BiFunction<T, Integer, Integer> concurrencyEvaluator;
+    
+    private final List<ThrowableConsumer<T, Throwable>> illegalStateHandlers = new ArrayList<>();
 
     private ConcurrencyAware(@Nonnull BiFunction<T, Integer, Integer> concurrencyEvaluator) {
         this.concurrencyEvaluator = checkNotNull(concurrencyEvaluator);
@@ -132,6 +134,13 @@ public class ConcurrencyAware<T> {
         concurrency.compute(obj, (thisKey, oldValue) -> {
             if (oldValue == null) {
                 logger.warn("illegal state found, obj:{}", thisKey);
+                for (ThrowableConsumer<T, Throwable> handler : illegalStateHandlers) {
+                    try {
+                        handler.accept(thisKey);
+                    } catch (Throwable e) {
+                        logger.error("", e);
+                    }
+                }
                 return null;
             }
             int result = oldValue - 1;
@@ -141,5 +150,11 @@ public class ConcurrencyAware<T> {
                 return result;
             }
         });
+    }
+
+    public ConcurrencyAware<T>
+            addIllegalStateHandler(@Nonnull ThrowableConsumer<T, Throwable> handler) {
+        illegalStateHandlers.add(checkNotNull(handler));
+        return this;
     }
 }

@@ -172,10 +172,10 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             }
             if (result == 0) {
                 logger.warn("found down object:{}", k);
+                recoveryFuture.get();
             }
             return result;
         });
-        recoveryFuture.get();
     }
 
     @Override
@@ -202,10 +202,10 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             }
             if (result == 0) {
                 logger.warn("found down object:{}", k);
+                recoveryFuture.get();
             }
             return result;
         });
-        recoveryFuture.get();
     }
 
     @Override

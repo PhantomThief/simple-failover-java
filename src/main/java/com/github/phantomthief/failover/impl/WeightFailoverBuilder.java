@@ -2,6 +2,7 @@ package com.github.phantomthief.failover.impl;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.base.Predicates.alwaysTrue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -12,6 +13,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
+import java.util.function.Predicate;
 import java.util.function.ToDoubleFunction;
 
 import javax.annotation.CheckReturnValue;
@@ -43,6 +45,8 @@ public class WeightFailoverBuilder<T> {
     int minWeight = 0;
     Integer weightOnMissingNode;
     String name;
+    
+    Predicate<T> filter = alwaysTrue();
 
     @CheckReturnValue
     @Nonnull
@@ -128,6 +132,17 @@ public class WeightFailoverBuilder<T> {
         checkArgument(time > 0);
         checkDuration = unit.toMillis(time);
         return this;
+    }
+
+    @CheckReturnValue
+    @Nonnull
+    public <E> WeightFailoverBuilder<E> filter(@Nonnull Predicate<E> filter) {
+        checkNotNull(filter);
+
+        @SuppressWarnings("unchecked")
+        WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
+        thisBuilder.filter = filter;
+        return thisBuilder;
     }
 
     @SuppressWarnings("unchecked")

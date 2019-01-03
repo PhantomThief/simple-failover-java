@@ -27,6 +27,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 
@@ -60,6 +61,11 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
      */
     private final Integer weightOnMissingNode;
 
+    /**
+     * 用于实现基于上下文的重试过滤逻辑
+     */
+    private final Predicate<T> filter;
+
     private volatile boolean closed;
 
     WeightFailover(WeightFailoverBuilder<T> builder) {
@@ -70,6 +76,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         this.currentWeightMap = new ConcurrentHashMap<>(builder.initWeightMap);
         this.onMinWeight = builder.onMinWeight;
         this.weightOnMissingNode = builder.weightOnMissingNode;
+        this.filter = builder.filter;
         this.recoveryFuture = lazy(
                 () -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
                     if (closed) {
@@ -240,8 +247,12 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         }
         List<T> result = new ArrayList<>();
         if (sum > 0) {
-            for (int i = 0; i < n; i++) {
-                if (snapshot.isEmpty() || sum == 0) {
+            int size = snapshot.size();
+            for (int i = 0; i < size; i++) {
+                if (sum == 0) {
+                    break;
+                }
+                if (result.size() == n) {
                     break;
                 }
                 int left = ThreadLocalRandom.current().nextInt(sum);
@@ -251,8 +262,11 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                     int entryWeight = candidate.getSecond();
                     if (left < entryWeight) {
                         T obj = candidate.getFirst();
-                        if (!exclusions.contains(obj)) {
+                        if (!exclusions.contains(obj) && filter.test(obj)) {
                             result.add(obj);
+                        }
+                        if (result.size() == n) {
+                            break;
                         }
                         iterator.remove();
                         sum -= entryWeight;

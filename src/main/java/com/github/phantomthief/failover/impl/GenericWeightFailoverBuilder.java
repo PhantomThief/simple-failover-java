@@ -4,6 +4,7 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnegative;
@@ -107,6 +108,13 @@ public class GenericWeightFailoverBuilder<E> {
             @Nonnull ThrowablePredicate<? super E, Throwable> failChecker,
             @Nonnegative double recoveredInitRate) {
         builder.checker(failChecker, recoveredInitRate);
+        return this;
+    }
+
+    @CheckReturnValue
+    @Nonnull
+    public GenericWeightFailoverBuilder<E> filter(Predicate<E> filter) {
+        builder.filter(filter);
         return this;
     }
 

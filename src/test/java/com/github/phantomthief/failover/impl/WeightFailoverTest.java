@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.function.Predicate;
 import java.util.stream.IntStream;
 
 import org.apache.commons.math3.stat.inference.BinomialTest;
@@ -26,6 +27,7 @@ import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.Failover;
 import com.google.common.collect.HashMultiset;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.TreeMultiset;
 
@@ -181,6 +183,41 @@ class WeightFailoverTest {
         }
         // old 60~70
         System.out.println(counter + ", cost:" + (currentTimeMillis() - s));
+    }
+
+    @Test
+    void testWeight() {
+        boolean[] block3 = { false };
+        Predicate<String> filter = it -> {
+            if (block3[0]) {
+                return !it.equals("s3");
+            } else {
+                return true;
+            }
+        };
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
+                .filter(filter) //
+                .checker(it -> 1.0) //
+                .build(ImmutableMap.of("s1", 1, "s2", 2, "s3", 3));
+        Multiset<String> result = HashMultiset.create();
+        for (int i = 0; i < 10000; i++) {
+            result.add(failover.getOneAvailable());
+        }
+        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.9, 2.1));
+        assertTrue(between((double) result.count("s3") / result.count("s1"), 2.9, 3.1));
+
+        block3[0] = true;
+
+        result.clear();
+        for (int i = 0; i < 10000; i++) {
+            result.add(failover.getOneAvailable());
+        }
+        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.9, 2.1));
+        assertEquals(0, result.count("s3"));
+    }
+
+    private boolean between(double k, double min, double max) {
+        return min <= k && k <= max;
     }
 
     private boolean check(String test) {

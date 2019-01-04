@@ -11,6 +11,8 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.github.phantomthief.failover.impl.WeightFailover;
 import com.github.phantomthief.util.ThrowableFunction;
@@ -21,12 +23,14 @@ import com.github.phantomthief.util.ThrowableFunction;
  */
 class RetryTest {
 
+    private static final Logger logger = LoggerFactory.getLogger(RetryTest.class);
+
     @Test
     void test() {
         WeightFailover<Integer> failover = buildNewFailover();
         for (int i = 0; i < 50; i++) {
             String x = failover.supplyWithRetry(this::doSomething);
-            System.out.println(x);
+            logger.debug("test:{}", x);
             assertEquals(x, "r:1");
         }
         failover = buildNewFailover();
@@ -35,19 +39,19 @@ class RetryTest {
         for (int i = 0; i < 50; i++) {
             assertThrows(Throwable.class, () -> {
                 String x = thisFailover.supplyWithRetry(this::alwaysFail);
-                System.out.println(x);
+                logger.debug("test:{}", x);
             });
         }
         failover = buildNewFailover();
-        System.out.println("test some failed.");
+        logger.info("test some failed.");
         for (int i = 0; i < 50; i++) {
             try {
                 String x = failover.supplyWithRetry(this::doSomething);
-                System.out.println(x);
+                logger.debug("test:{}", x);
                 assertEquals(x, "r:1");
             } catch (Throwable e) {
                 assertTrue(true);
-                System.out.println("fail, pass.");
+                logger.info("fail, pass.");
             }
         }
     }
@@ -67,6 +71,18 @@ class RetryTest {
             };
             failover2.supplyWithRetry(func);
         });
+    }
+
+    @Test
+    void testRunRetry() {
+        WeightFailover<Integer> failover = buildNewFailover();
+        for (int i = 0; i < 10; i++) {
+            failover.runWithRetry(it -> {
+                if (it == 1) {
+                    throw new IllegalStateException();
+                }
+            });
+        }
     }
 
     private WeightFailover<Integer> buildNewFailover() {

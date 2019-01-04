@@ -4,7 +4,7 @@ import static com.google.common.base.Throwables.throwIfUnchecked;
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.Collections.singleton;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.github.phantomthief.util.ThrowableFunction;
 import com.google.common.collect.ImmutableList;
 
 /**
@@ -25,18 +26,27 @@ class ComboFailoverTest {
 
     @Test
     void test() {
+        boolean[] checkerSwitch = { true };
+        ThrowableFunction<String, Double, Throwable> checker = value -> {
+            if (checkerSwitch[0]) {
+                return check(value);
+            } else {
+                return 0.0D;
+            }
+        };
         ComboFailover<String> combo = ComboFailover.<String> builder() //
                 .add(WeightFailover.<String> newGenericBuilder() //
-                        .checker(this::check) //
-                        .checkDuration(1, SECONDS) //
+                        .checker(checker) //
+                        .checkDuration(10, MILLISECONDS) //
                         .failReduceRate(0.1) //
                         .build(of("test1", "test2"))) //
                 .add(WeightFailover.<String> newGenericBuilder() //
-                        .checker(this::check) //
-                        .checkDuration(1, SECONDS) //
+                        .checker(checker) //
+                        .checkDuration(10, MILLISECONDS) //
                         .failReduceRate(0.1) //
                         .build(of("test3", "test4"))) //
                 .build();
+        checkerSwitch[0] = false;
         ImmutableList<String> all = of("test1", "test2", "test3", "test4");
         assertTrue(all.containsAll(combo.getAll()));
         assertTrue(all.containsAll(combo.getAvailable()));
@@ -55,7 +65,9 @@ class ComboFailoverTest {
         for (int i = 0; i < 10; i++) {
             assertFalse(of("test3").contains(combo.getOneAvailable()));
         }
-        sleepUninterruptibly(2, SECONDS);
+        checkerSwitch[0] = true;
+        sleepUninterruptibly(100, MILLISECONDS);
+        checkerSwitch[0] = false;
         assertTrue(combo.getFailed().isEmpty());
         for (int i = 0; i < 10; i++) {
             assertTrue(of("test3")
@@ -72,7 +84,9 @@ class ComboFailoverTest {
             assertFalse(of("test1", "test2").contains(combo.getOneAvailable()));
             assertTrue(of("test3", "test4").contains(combo.getOneAvailable()));
         }
-        sleepUninterruptibly(2, SECONDS);
+        checkerSwitch[0] = true;
+        sleepUninterruptibly(100, MILLISECONDS);
+        checkerSwitch[0] = false;
 
         combo.forEach(failover -> {
             if (failover instanceof AutoCloseable) {

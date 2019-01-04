@@ -55,7 +55,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                 .build(new CacheLoader<T, EvictingQueue<Long>>() {
 
                     @Override
-                    public EvictingQueue<Long> load(T key) throws Exception {
+                    public EvictingQueue<Long> load(T key) {
                         return create(failCount);
                     }
                 });
@@ -64,7 +64,7 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
                 tryCloseScheduler();
                 return;
             }
-            if (failedList == null || failedList.isEmpty()) {
+            if (failedList.isEmpty()) {
                 return;
             }
             try {

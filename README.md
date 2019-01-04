@@ -11,24 +11,38 @@ A simple failover library for Java
 <dependency>
     <groupId>com.github.phantomthief</groupId>
     <artifactId>simple-failover</artifactId>
-    <version>0.1.11</version>
+    <version>0.1.16</version>
 </dependency>
 ```
 
 ```Java	
-List<T> orig = ... // original list
+class MyClientFailoverHolder {
 
-Failover<T> failover = RecoverableCheckFailover.<T> newBuilder() //
-        .setFailCount(10) //
-        .setFailDuration(1, TimeUnit.MINUTES) //
-        .setChecker(this::test, RECOVERED_RATE) //
-        .build(orig);
-List<T> available = failover.getAvailable(2); // random get 2 available objects.
-// or
-T obj = failover.getOneAvailable(); // random get an available object.
+  private final Failover<MyClient> failover = WeightFailover.<MyClient> newGenericBuilder() //
+          .checker(this::checkAlive)
+          .build(allClients(), 100);
 
-// do something with object...
+  private List<MyClient> allClients() {
+    // ...
+  }
 
-// when it fails, mark it.
-failover.fail(obj);
+  private double checkAlive(MyClient myClient) {
+    if (checkAlive(myAlive)) {
+      return 1.0D;
+    } else {
+      return 0.0D;
+    }
+  }
+
+  public void foo() {
+    MyClient client = failover.getOneAvailable();
+    try {
+      client.doSomething(); //
+      failover.success(client);
+    } catch (Throwable e) {
+      failover.fail(client);
+      throw e;
+    }
+  }
+}
 ```

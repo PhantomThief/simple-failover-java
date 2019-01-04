@@ -138,13 +138,13 @@ public class FailoverUtils {
         }
         if (rootCause instanceof ConnectException) {
             if (rootCause.getMessage() != null
-                    && rootCause.getMessage().contains("Connection refused")) {
+                    && rootCause.getMessage().toLowerCase().contains("connection refused")) {
                 return true;
             }
         }
         if (rootCause instanceof SocketTimeoutException) {
             if (rootCause.getMessage() != null
-                    && rootCause.getMessage().contains("connect timed out")) {
+                    && rootCause.getMessage().toLowerCase().contains("connect timed out")) {
                 return true;
             }
         }

@@ -1,5 +1,6 @@
 package com.github.phantomthief.failover.util;
 
+import static com.github.phantomthief.failover.WeighTestUtils.checkRatio;
 import static java.util.Collections.singleton;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -25,21 +26,17 @@ class WeightTest {
         for (int i = 0; i < 10000; i++) {
             result.add(weight.get());
         }
-        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.8, 2.2));
-        assertTrue(between((double) result.count("s3") / result.count("s1"), 2.8, 3.2));
+        assertTrue(checkRatio(result.count("s2"), result.count("s1"), 2));
+        assertTrue(checkRatio(result.count("s3"), result.count("s1"), 3));
 
         result.clear();
 
         for (int i = 0; i < 10000; i++) {
             result.add(weight.getWithout(singleton("s3")));
         }
-        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.8, 2.2));
+        assertTrue(checkRatio(result.count("s2"), result.count("s1"), 2));
         assertEquals(0, result.count("s3"));
 
         assertEquals(3, weight.allNodes().size());
-    }
-
-    private boolean between(double k, double min, double max) {
-        return min <= k && k <= max;
     }
 }

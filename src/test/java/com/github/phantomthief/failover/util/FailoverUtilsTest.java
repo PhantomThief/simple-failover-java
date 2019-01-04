@@ -1,5 +1,6 @@
 package com.github.phantomthief.failover.util;
 
+import static com.github.phantomthief.failover.WeighTestUtils.checkRatio;
 import static com.github.phantomthief.failover.util.FailoverUtils.isHostUnavailable;
 import static com.github.phantomthief.failover.util.FailoverUtils.runWithRetry;
 import static com.github.phantomthief.failover.util.FailoverUtils.supplyWithRetry;
@@ -49,11 +50,7 @@ class FailoverUtilsTest {
                 result.add("s1");
             }
         }
-        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.8, 2.2));
-    }
-
-    private boolean between(double k, double min, double max) {
-        return min <= k && k <= max;
+        assertTrue(checkRatio(result.count("s2"), result.count("s1"), 2));
     }
 
     private void run(String client) {

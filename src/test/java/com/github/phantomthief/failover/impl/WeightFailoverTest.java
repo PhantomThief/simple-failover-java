@@ -1,5 +1,6 @@
 package com.github.phantomthief.failover.impl;
 
+import static com.github.phantomthief.failover.WeighTestUtils.checkRatio;
 import static com.google.common.collect.ImmutableList.of;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.lang.System.currentTimeMillis;
@@ -203,8 +204,8 @@ class WeightFailoverTest {
         for (int i = 0; i < 10000; i++) {
             result.add(failover.getOneAvailable());
         }
-        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.8, 2.2));
-        assertTrue(between((double) result.count("s3") / result.count("s1"), 2.8, 3.2));
+        assertTrue(checkRatio(result.count("s2"), result.count("s1"), 2));
+        assertTrue(checkRatio(result.count("s3"), result.count("s1"), 3));
 
         block3[0] = true;
 
@@ -212,7 +213,7 @@ class WeightFailoverTest {
         for (int i = 0; i < 10000; i++) {
             result.add(failover.getOneAvailable());
         }
-        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.8, 2.2));
+        assertTrue(checkRatio(result.count("s2"), result.count("s1"), 2));
         assertEquals(0, result.count("s3"));
 
         failover.down("s2");
@@ -222,12 +223,9 @@ class WeightFailoverTest {
             result.add(failover.getOneAvailable());
         }
         assertEquals(0, result.count("s2"));
-        assertTrue(between((double) result.count("s3") / result.count("s1"), 2.8, 3.2));
+        assertTrue(checkRatio(result.count("s3"), result.count("s1"), 3));
     }
 
-    private boolean between(double k, double min, double max) {
-        return min <= k && k <= max;
-    }
 
     private boolean check(String test) {
         System.out.println("test:" + test);

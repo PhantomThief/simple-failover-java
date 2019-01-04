@@ -1,5 +1,6 @@
 package com.github.phantomthief.failover.impl;
 
+import static com.github.phantomthief.failover.WeighTestUtils.checkRatio;
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -42,10 +43,6 @@ class RecoverableCheckFailoverTest {
         for (int i = 0; i < 10000; i++) {
             result.add(failover.getOneAvailable());
         }
-        assertTrue(between((double) result.count("s2") / result.count("s1"), 0.8, 1.2));
-    }
-
-    private boolean between(double k, double min, double max) {
-        return min <= k && k <= max;
+        assertTrue(checkRatio(result.count("s2"), result.count("s1"), 1));
     }
 }

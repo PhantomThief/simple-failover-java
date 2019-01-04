@@ -10,11 +10,11 @@
         <guava.version>21.0</guava.version>
         <jsr305.version>3.0.2</jsr305.version>
 
-        <junit-jupiter.version>5.0.2</junit-jupiter.version>
-        <junit-platform.version>1.0.2</junit-platform.version>
+        <junit-jupiter.version>5.3.2</junit-jupiter.version>
+        <junit-platform.version>1.3.2</junit-platform.version>
         <logback-classic.version>1.2.3</logback-classic.version>
 
-        <maven-surefire-plugin.version>2.19.1</maven-surefire-plugin.version>
+        <maven-surefire-plugin.version>3.0.0-M2</maven-surefire-plugin.version>
         <nexus-staging-maven-plugin.version>1.6.8</nexus-staging-maven-plugin.version>
         <jacoco-maven-plugin.version>0.8.0</jacoco-maven-plugin.version>
         <coveralls-maven-plugin.version>4.3.0</coveralls-maven-plugin.version>
@@ -83,6 +83,12 @@
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit-jupiter.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
             <version>${junit-jupiter.version}</version>
             <scope>test</scope>
         </dependency>

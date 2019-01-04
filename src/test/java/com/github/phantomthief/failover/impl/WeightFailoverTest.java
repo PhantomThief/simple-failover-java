@@ -197,14 +197,14 @@ class WeightFailoverTest {
         };
         WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
                 .filter(filter) //
-                .checker(it -> 1.0) //
+                .checker(it -> 0.0) //
                 .build(ImmutableMap.of("s1", 1, "s2", 2, "s3", 3));
         Multiset<String> result = HashMultiset.create();
         for (int i = 0; i < 10000; i++) {
             result.add(failover.getOneAvailable());
         }
-        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.9, 2.1));
-        assertTrue(between((double) result.count("s3") / result.count("s1"), 2.9, 3.1));
+        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.8, 2.2));
+        assertTrue(between((double) result.count("s3") / result.count("s1"), 2.8, 3.2));
 
         block3[0] = true;
 
@@ -212,8 +212,17 @@ class WeightFailoverTest {
         for (int i = 0; i < 10000; i++) {
             result.add(failover.getOneAvailable());
         }
-        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.9, 2.1));
+        assertTrue(between((double) result.count("s2") / result.count("s1"), 1.8, 2.2));
         assertEquals(0, result.count("s3"));
+
+        failover.down("s2");
+        block3[0] = false;
+        result.clear();
+        for (int i = 0; i < 10000; i++) {
+            result.add(failover.getOneAvailable());
+        }
+        assertEquals(0, result.count("s2"));
+        assertTrue(between((double) result.count("s3") / result.count("s1"), 2.8, 3.2));
     }
 
     private boolean between(double k, double min, double max) {

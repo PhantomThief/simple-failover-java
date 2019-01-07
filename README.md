@@ -44,5 +44,9 @@ class MyClientFailoverHolder {
       throw e;
     }
   }
+
+  public void foo2() {
+    failover.runWithRetry(MyClient::doSomething);
+  }
 }
 ```

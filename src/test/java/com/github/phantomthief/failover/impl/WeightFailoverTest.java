@@ -17,6 +17,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -57,6 +58,9 @@ class WeightFailoverTest {
             });
             sleepUninterruptibly(10, MILLISECONDS);
         }
+
+        assertEquals(new HashSet<>(failover.getAvailable()),
+                new HashSet<>(failover.getAvailable(original.size())));
         System.out.println(getCount);
         System.out.println(result);
     }
@@ -102,6 +106,8 @@ class WeightFailoverTest {
             assertNotEquals(available, "1");
             sleepUninterruptibly(10, MILLISECONDS);
         }
+        assertEquals(new HashSet<>(failover.getAvailable()),
+                new HashSet<>(failover.getAvailable(original.size())));
         System.out.println(getCount);
         System.out.println(result);
     }

@@ -2,17 +2,12 @@ package com.github.phantomthief.failover.util;
 
 import static com.github.phantomthief.failover.util.RandomListUtils.getRandom;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.collect.Multimaps.asMap;
-import static com.google.common.collect.Multimaps.newListMultimap;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.NavigableMap;
 import java.util.NoSuchElementException;
-import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.BiFunction;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -22,7 +17,6 @@ import org.slf4j.LoggerFactory;
 
 import com.github.phantomthief.util.ThrowableConsumer;
 import com.github.phantomthief.util.ThrowableFunction;
-import com.google.common.collect.ListMultimap;
 
 /**
  * @author w.vela
@@ -32,42 +26,68 @@ public class ConcurrencyAware<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(ConcurrencyAware.class);
 
+    private static final int OPTIMIZE_RANDOM_TRIES = 2;
+
     private final Map<T, Integer> concurrency = new ConcurrentHashMap<>();
-    private final BiFunction<T, Integer, Integer> concurrencyEvaluator;
-    
     private final List<ThrowableConsumer<T, Throwable>> illegalStateHandlers = new ArrayList<>();
 
-    private ConcurrencyAware(@Nonnull BiFunction<T, Integer, Integer> concurrencyEvaluator) {
-        this.concurrencyEvaluator = checkNotNull(concurrencyEvaluator);
-    }
-
-    public static <T> ConcurrencyAware<T>
-            create(@Nonnull BiFunction<T, Integer, Integer> concurrencyEvaluator) {
-        return new ConcurrencyAware<>(concurrencyEvaluator);
+    private ConcurrencyAware() {
     }
 
     public static <T> ConcurrencyAware<T> create() {
-        return create((b, i) -> i);
+        return new ConcurrencyAware<>();
     }
 
     @Nullable
     private T selectIdlest(@Nonnull Iterable<T> candidates) {
         checkNotNull(candidates);
-        ListMultimap<Integer, T> map = null;
+        if (candidates instanceof List) {
+            List<T> candidatesCol = (List<T>) candidates;
+            T t = selectIdlestFast(candidatesCol);
+            if (t != null) {
+                return t;
+            }
+        }
+
+        // find objects with minimum concurrency
+        List<T> idlest = new ArrayList<>();
+        int minValue = Integer.MAX_VALUE;
         for (T obj : candidates) {
             int c = concurrency.getOrDefault(obj, 0);
-            if (map == null) {
-                map = newListMultimap(new TreeMap<>(), ArrayList::new);
+            if (c < minValue) {
+                minValue = c;
+                idlest.clear();
+                idlest.add(obj);
+            } else if (c == minValue) {
+                idlest.add(obj);
             }
-            map.put(concurrencyEvaluator.apply(obj, c), obj);
         }
-        if (map == null) {
-            return null;
-        }
-        NavigableMap<Integer, List<T>> asMap = (NavigableMap<Integer, List<T>>) asMap(map);
-        T result = getRandom(asMap.firstEntry().getValue());
+        T result = getRandom(idlest);
         assert result != null;
         return result;
+    }
+
+    /**
+     * Try to find a node with 0 concurrency by pure random.
+     * It is assuming that concurrency is very low for most cases.
+     * This method will optimize performance significantly on large candidates collection,
+     * because it is no need to build a large ListMultimap of TreeMap.
+     */
+    @Nullable
+    private T selectIdlestFast(List<T> candidates) {
+        if (candidates.isEmpty()) {
+            throw new NoSuchElementException("candidates list is empty");
+        } else if (candidates.size() == 1) {
+            return candidates.get(0);
+        }
+        for (int i = 0; i < OPTIMIZE_RANDOM_TRIES; ++i) {
+            T result = getRandom(candidates);
+            int objConcurrency = concurrency.getOrDefault(result, 0);
+            if (objConcurrency <= 0) {
+                return result;
+            }
+        }
+        return null;
     }
 
     /**

@@ -50,9 +50,9 @@
     </licenses>
 
     <scm>
-        <connection>scm:git:https://github.com/PhantomThief/simple-failover-java.git</connection>
+        <connection>scm:git:git@github.com:PhantomThief/simple-failover-java.git</connection>
         <url>https://github.com/PhantomThief/simple-failover-java.git</url>
-        <developerConnection>scm:git:https://github.com/PhantomThief/simple-failover-java.git
+        <developerConnection>scm:git:git@github.com:PhantomThief/simple-failover-java.git
         </developerConnection>
     </scm>
 

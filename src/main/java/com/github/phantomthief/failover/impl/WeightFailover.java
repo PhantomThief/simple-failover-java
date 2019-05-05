@@ -217,7 +217,14 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public List<T> getAvailable() {
-        return getAvailable(MAX_VALUE);
+        List<T> result = new ArrayList<>(currentWeightMap.size());
+        for (Entry<T, Integer> entry : currentWeightMap.entrySet()) {
+            T item = entry.getKey();
+            if (entry.getValue() > 0 && filter.test(item)) {
+                result.add(item);
+            }
+        }
+        return result;
     }
 
     @Override

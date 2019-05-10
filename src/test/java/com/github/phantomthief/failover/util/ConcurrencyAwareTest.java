@@ -118,4 +118,19 @@ class ConcurrencyAwareTest {
         assertNotEquals(current.get(), aware.supply(all, it -> it));
         c2.countDown();
     }
+
+    @Test
+    void testGetConcurrencyCount() {
+        List<String> all  = ImmutableList.of("t1", "t2");
+        ConcurrencyAware<String> aware = ConcurrencyAware.create();
+        String t1 = aware.beginWithoutRecordConcurrency(all);
+        assertEquals(1, aware.recordBeginConcurrencyAndGet(t1));
+        String t2 = aware.beginWithoutRecordConcurrency(all);
+        assertEquals(1, aware.recordBeginConcurrencyAndGet(t2));
+        String t3 = aware.beginWithoutRecordConcurrency(all);
+        assertEquals(2, aware.recordBeginConcurrencyAndGet(t3));
+        assertEquals(1, aware.endAndGet(t3));
+        assertEquals(0, aware.endAndGet(t2));
+        assertEquals(0, aware.endAndGet(t1));
+    }
 }

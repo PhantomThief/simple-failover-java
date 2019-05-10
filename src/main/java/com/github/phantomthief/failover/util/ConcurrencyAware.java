@@ -146,7 +146,7 @@ public class ConcurrencyAware<T> {
     }
 
     public int endAndGet(@Nonnull T obj) {
-        return concurrency.compute(obj, (thisKey, oldValue) -> {
+        Integer concurrentNum = concurrency.compute(obj, (thisKey, oldValue) -> {
             if (oldValue == null) {
                 logger.warn("illegal state found, obj:{}", thisKey);
                 for (ThrowableConsumer<T, Throwable> handler : illegalStateHandlers) {
@@ -165,6 +165,7 @@ public class ConcurrencyAware<T> {
                 return result;
             }
         });
+        return concurrentNum == null ? 0 : concurrentNum;
     }
 
     public ConcurrencyAware<T>

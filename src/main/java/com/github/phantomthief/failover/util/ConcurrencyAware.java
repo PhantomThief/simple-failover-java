@@ -122,16 +122,16 @@ public class ConcurrencyAware<T> {
     /**
      * this is a low level api, for special purpose or mock.
      */
-    public void recordBeginConcurrency(@Nonnull T obj) {
-        concurrency.merge(obj, 1, Integer::sum);
+    public int recordBeginConcurrency(@Nonnull T obj) {
+        return concurrency.merge(obj, 1, Integer::sum);
     }
 
     /**
      * @param obj from {@link #begin}'s return
      * @see #begin
      */
-    public void end(@Nonnull T obj) {
-        concurrency.compute(obj, (thisKey, oldValue) -> {
+    public int end(@Nonnull T obj) {
+        return concurrency.compute(obj, (thisKey, oldValue) -> {
             if (oldValue == null) {
                 logger.warn("illegal state found, obj:{}", thisKey);
                 for (ThrowableConsumer<T, Throwable> handler : illegalStateHandlers) {

@@ -121,16 +121,31 @@ public class ConcurrencyAware<T> {
 
     /**
      * this is a low level api, for special purpose or mock.
+     * 使用 {@link ConcurrencyAware#recordBeginConcurrencyAndGet(Object)}
      */
-    public int recordBeginConcurrency(@Nonnull T obj) {
+    @Deprecated
+    public void recordBeginConcurrency(@Nonnull T obj) {
+        recordBeginConcurrencyAndGet(obj);
+    }
+
+    /**
+     * 增加并发计数，并返回当前的并发数
+     */
+    public int recordBeginConcurrencyAndGet(@Nonnull T obj) {
         return concurrency.merge(obj, 1, Integer::sum);
     }
 
     /**
      * @param obj from {@link #begin}'s return
      * @see #begin
+     * 使用 {@link ConcurrencyAware#endAndGet(Object)}
      */
-    public int end(@Nonnull T obj) {
+    @Deprecated
+    public void end(@Nonnull T obj) {
+        endAndGet(obj);
+    }
+
+    public int endAndGet(@Nonnull T obj) {
         return concurrency.compute(obj, (thisKey, oldValue) -> {
             if (oldValue == null) {
                 logger.warn("illegal state found, obj:{}", thisKey);

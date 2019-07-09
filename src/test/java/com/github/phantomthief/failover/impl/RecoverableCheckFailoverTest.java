@@ -26,10 +26,10 @@ class RecoverableCheckFailoverTest {
         Predicate<String> checker = it -> checkerSwitcher[0];
         RecoverableCheckFailover<String> failover = RecoverableCheckFailover
                 .<String> newGenericBuilder().setChecker(checker) // 
-                .setFailCount(10) //
-                .setFailDuration(100, MILLISECONDS) //
-                .setRecoveryCheckDuration(100, MILLISECONDS) //
-                .setReturnOriginalWhileAllFailed(false) //
+                .setFailCount(10)
+                .setFailDuration(100, MILLISECONDS)
+                .setRecoveryCheckDuration(100, MILLISECONDS)
+                .setReturnOriginalWhileAllFailed(false)
                 .build(ImmutableList.of("s1", "s2"));
         for (int i = 0; i < 10; i++) {
             failover.fail("s2");

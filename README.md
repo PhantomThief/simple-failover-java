@@ -18,7 +18,7 @@ A simple failover library for Java
 ```Java	
 class MyClientFailoverHolder {
 
-  private final Failover<MyClient> failover = WeightFailover.<MyClient> newGenericBuilder() //
+  private final Failover<MyClient> failover = WeightFailover.<MyClient> newGenericBuilder()
           .checker(this::checkAlive)
           .build(allClients(), 100);
 
@@ -37,7 +37,7 @@ class MyClientFailoverHolder {
   public void foo() {
     MyClient client = failover.getOneAvailable();
     try {
-      client.doSomething(); //
+      client.doSomething();
       failover.success(client);
     } catch (Throwable e) {
       failover.fail(client);

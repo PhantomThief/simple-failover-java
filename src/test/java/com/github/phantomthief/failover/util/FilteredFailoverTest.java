@@ -24,11 +24,11 @@ class FilteredFailoverTest {
     void test() {
         Set<String> blocked = new HashSet<>();
         Predicate<String> filter = it -> !blocked.contains(it);
-        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .checker(it -> 1.0D) //
-                .filter(filter) //
-                .build(rangeClosed(1, 10) //
-                        .mapToObj(it -> "s" + it) //
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .checker(it -> 1.0D)
+                .filter(filter)
+                .build(rangeClosed(1, 10)
+                        .mapToObj(it -> "s" + it)
                         .collect(toList()), 10);
         blocked.add("s1");
         for (int i = 0; i < 100; i++) {
@@ -40,11 +40,11 @@ class FilteredFailoverTest {
     @Test
     void testThreadRetry() {
         ThreadLocal<Set<String>> tried = withInitial(HashSet::new);
-        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .checker(it -> 1.0D) //
-                .filter(it -> !tried.get().contains(it)) //
-                .build(rangeClosed(1, 10) //
-                        .mapToObj(it -> "s" + it) //
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .checker(it -> 1.0D)
+                .filter(it -> !tried.get().contains(it))
+                .build(rangeClosed(1, 10)
+                        .mapToObj(it -> "s" + it)
                         .collect(toList()), 10);
 
         for (int i = 0; i < 100; i++) {

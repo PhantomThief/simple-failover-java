@@ -18,9 +18,9 @@ class WeightTest {
 
     @Test
     void test() {
-        Weight<String> weight = new Weight<String>() //
-                .add("s1", 1) //
-                .add("s2", 2) //
+        Weight<String> weight = new Weight<String>()
+                .add("s1", 1)
+                .add("s2", 2)
                 .add("s3", 3);
         Multiset<String> result = HashMultiset.create();
         for (int i = 0; i < 10000; i++) {

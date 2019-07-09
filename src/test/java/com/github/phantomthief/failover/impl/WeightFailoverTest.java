@@ -41,8 +41,8 @@ class WeightFailoverTest {
     @Test
     void testCommon() {
         List<String> original = Arrays.asList("1", "2", "3");
-        Failover<String> failover = WeightFailover.newBuilder() //
-                .checker(this::check, 1) //
+        Failover<String> failover = WeightFailover.newBuilder()
+                .checker(this::check, 1)
                 .build(original);
         Multiset<String> result = HashMultiset.create();
         Multiset<Integer> getCount = HashMultiset.create();
@@ -68,10 +68,10 @@ class WeightFailoverTest {
     @Test
     void testMinWeight() {
         List<String> original = Arrays.asList("1", "2", "3");
-        Failover<String> failover = WeightFailover.newBuilder() //
-                .checker(this::check, 1) //
-                .minWeight(1) //
-                .onMinWeight(i -> System.out.println("onMin:" + i)) //
+        Failover<String> failover = WeightFailover.newBuilder()
+                .checker(this::check, 1)
+                .minWeight(1)
+                .onMinWeight(i -> System.out.println("onMin:" + i))
                 .build(original);
         Multiset<String> result = HashMultiset.create();
         Multiset<Integer> getCount = HashMultiset.create();
@@ -94,9 +94,9 @@ class WeightFailoverTest {
     @Test
     void testDown() {
         List<String> original = Arrays.asList("1", "2", "3");
-        Failover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .checker(it -> false, 1) //
-                .onMinWeight(i -> System.out.println("onMin:" + i)) //
+        Failover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .checker(it -> false, 1)
+                .onMinWeight(i -> System.out.println("onMin:" + i))
                 .build(original);
         Multiset<String> result = HashMultiset.create();
         Multiset<Integer> getCount = HashMultiset.create();
@@ -128,8 +128,8 @@ class WeightFailoverTest {
             map.put("j" + i, jWeight);
             sum += jWeight;
         }
-        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .checker(it -> true, 1) //
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .checker(it -> true, 1)
                 .build(map);
         Multiset<String> counter = HashMultiset.create();
         int trials = 100000;
@@ -145,7 +145,7 @@ class WeightFailoverTest {
     @Test
     void testRateRecover() {
         WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
-                .checker(it -> 0.5) //
+                .checker(it -> 0.5)
                 .build(of("s1", "s2"), 100);
         assertEquals(100, failover.currentWeight("s1"));
         assertEquals(100, failover.currentWeight("s2"));
@@ -158,7 +158,7 @@ class WeightFailoverTest {
     @Test
     void testRateRecover2() {
         WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
-                .checker(it -> true, 0.00001) //
+                .checker(it -> true, 0.00001)
                 .build(of("s1", "s2"), 100);
         assertEquals(100, failover.currentWeight("s1"));
         assertEquals(100, failover.currentWeight("s2"));
@@ -172,8 +172,8 @@ class WeightFailoverTest {
     void testPerf() {
         Map<String, Integer> map = IntStream.range(1, 10).boxed()
                 .collect(toMap(it -> "s" + it, identity()));
-        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .checker(it -> 1.0) //
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .checker(it -> 1.0)
                 .build(map);
         long s = currentTimeMillis();
         Multiset<String> counter = TreeMultiset.create();
@@ -202,9 +202,9 @@ class WeightFailoverTest {
                 return true;
             }
         };
-        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
-                .filter(filter) //
-                .checker(it -> 0.0) //
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .filter(filter)
+                .checker(it -> 0.0)
                 .build(ImmutableMap.of("s1", 1, "s2", 2, "s3", 3));
         Multiset<String> result = HashMultiset.create();
         for (int i = 0; i < 10000; i++) {

@@ -34,17 +34,17 @@ class ComboFailoverTest {
                 return 0.0D;
             }
         };
-        ComboFailover<String> combo = ComboFailover.<String> builder() //
-                .add(WeightFailover.<String> newGenericBuilder() //
-                        .checker(checker) //
-                        .checkDuration(10, MILLISECONDS) //
-                        .failReduceRate(0.1) //
-                        .build(of("test1", "test2"))) //
-                .add(WeightFailover.<String> newGenericBuilder() //
-                        .checker(checker) //
-                        .checkDuration(10, MILLISECONDS) //
-                        .failReduceRate(0.1) //
-                        .build(of("test3", "test4"))) //
+        ComboFailover<String> combo = ComboFailover.<String> builder()
+                .add(WeightFailover.<String> newGenericBuilder()
+                        .checker(checker)
+                        .checkDuration(10, MILLISECONDS)
+                        .failReduceRate(0.1)
+                        .build(of("test1", "test2")))
+                .add(WeightFailover.<String> newGenericBuilder()
+                        .checker(checker)
+                        .checkDuration(10, MILLISECONDS)
+                        .failReduceRate(0.1)
+                        .build(of("test3", "test4")))
                 .build();
         checkerSwitch[0] = false;
         ImmutableList<String> all = of("test1", "test2", "test3", "test4");

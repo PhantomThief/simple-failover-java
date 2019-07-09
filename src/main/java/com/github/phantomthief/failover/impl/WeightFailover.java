@@ -305,9 +305,9 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public Set<T> getFailed() {
-        return currentWeightMap.entrySet().stream() //
-                .filter(entry -> entry.getValue() == 0) //
-                .map(Entry::getKey) //
+        return currentWeightMap.entrySet().stream()
+                .filter(entry -> entry.getValue() == 0)
+                .map(Entry::getKey)
                 .collect(toSet());
     }
 

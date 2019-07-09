@@ -69,9 +69,9 @@ public class RecoverableCheckFailover<T> implements Failover<T>, Closeable {
             }
             try {
                 // 考虑到COWArraySet不支持iterator.remove，所以这里使用搜集->统一清理的策略
-                List<T> covered = failedList.stream() //
-                        .filter(checker) //
-                        .peek(obj -> logger.info("obj:{} is recovered during test.", obj)) //
+                List<T> covered = failedList.stream()
+                        .filter(checker)
+                        .peek(obj -> logger.info("obj:{} is recovered during test.", obj))
                         .collect(toList());
                 failedList.removeAll(covered);
             } catch (Throwable e) {

@@ -47,7 +47,7 @@ class ConcurrencyAwareTest {
                 countDownLatches1.add(c1);
                 CountDownLatch c2 = new CountDownLatch(1);
                 countDownLatches2.add(c2);
-                Thread thread = new Thread(() -> { //
+                Thread thread = new Thread(() -> {
                     try {
                         aware.run(all, it -> {
                             concurrency.merge(it, 1, Integer::sum);
@@ -65,10 +65,10 @@ class ConcurrencyAwareTest {
             for (CountDownLatch c1 : countDownLatches1) {
                 c1.await();
             }
-            assertNotEquals(concurrency.entrySet().stream() //
-                    .sorted(Comparator.<Entry<?, Integer>> comparingInt(Entry::getValue).reversed()) //
-                    .map(Entry::getKey) //
-                    .findAny() //
+            assertNotEquals(concurrency.entrySet().stream()
+                    .sorted(Comparator.<Entry<?, Integer>> comparingInt(Entry::getValue).reversed())
+                    .map(Entry::getKey)
+                    .findAny()
                     .orElse(null), aware.supply(all, it -> it));
             for (CountDownLatch c2 : countDownLatches2) {
                 c2.countDown();
@@ -103,7 +103,7 @@ class ConcurrencyAwareTest {
         AtomicReference<String> current = new AtomicReference<>();
         CountDownLatch c1 = new CountDownLatch(1);
         CountDownLatch c2 = new CountDownLatch(1);
-        new Thread(() -> { //
+        new Thread(() -> {
             try {
                 aware.run(all, it -> {
                     current.set(it);

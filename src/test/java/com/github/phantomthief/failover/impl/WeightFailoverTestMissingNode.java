@@ -16,13 +16,13 @@ class WeightFailoverTestMissingNode {
 
     @Test
     void testMissingEnable() {
-        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
                 .checker(s -> {
                     System.err.println("check:" + s);
                     return s.equals("test1");
-                }, 1) //
-                .checkDuration(1, SECONDS) //
-                .autoAddOnMissing(10) //
+                }, 1)
+                .checkDuration(1, SECONDS)
+                .autoAddOnMissing(10)
                 .build(emptyList());
         assertTrue(failover.getAll().isEmpty());
         assertTrue(failover.getAvailable().isEmpty());
@@ -53,12 +53,12 @@ class WeightFailoverTestMissingNode {
 
     @Test
     void testNormal() {
-        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder() //
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
                 .checker(s -> {
                     System.err.println("check:" + s);
                     return s.equals("test1");
-                }, 1) //
-                .checkDuration(1, SECONDS) //
+                }, 1)
+                .checkDuration(1, SECONDS)
                 .build(emptyList());
         assertTrue(failover.getAll().isEmpty());
         assertTrue(failover.getAvailable().isEmpty());

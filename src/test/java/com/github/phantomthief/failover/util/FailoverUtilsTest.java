@@ -32,8 +32,8 @@ class FailoverUtilsTest {
     @Test
     void testRetry() {
         WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
-                .checker(it -> 1.0D) //
-                .failReduceRate(0.00001D) //
+                .checker(it -> 1.0D)
+                .failReduceRate(0.00001D)
                 .build(ImmutableMap.of("s1", 1000, "s2", 2000));
         for (int i = 0; i < 100; i++) {
             runWithRetry(2, 10, failover, this::run);

@@ -17,8 +17,8 @@ class WeightFailoverTestLeakRecovery {
     @Test
     void test() {
         boolean[] check = { false };
-        WeightFailover<String> weightFailover = WeightFailover.<String> newGenericBuilder() //
-                .checkDuration(10, MILLISECONDS) //
+        WeightFailover<String> weightFailover = WeightFailover.<String> newGenericBuilder()
+                .checkDuration(10, MILLISECONDS)
                 .checker(str -> {
                     check[0] = true;
                     return 0.0;

@@ -45,54 +45,54 @@ public class ComboFailover<T> implements Failover<T>, Iterable<Failover<T>> {
     }
 
     private HashMultimap<T, Failover<T>> groupByObjects() {
-        return failoverList.stream() //
-                .flatMap(failover -> failover.getAll().stream() //
+        return failoverList.stream()
+                .flatMap(failover -> failover.getAll().stream()
                         .map(it -> tuple(it, failover)))
                 .collect(toMultimap(TwoTuple::getFirst, TwoTuple::getSecond, HashMultimap::create));
     }
 
     @Override
     public List<T> getAll() {
-        return failoverList.stream() //
-                .map(Failover::getAll) //
-                .flatMap(List::stream) //
+        return failoverList.stream()
+                .map(Failover::getAll)
+                .flatMap(List::stream)
                 .collect(toList());
     }
 
     @Nullable
     @Override
     public T getOneAvailableExclude(Collection<T> exclusions) {
-        return failoverList.stream() //
-                .map(failover -> failover.getOneAvailableExclude(exclusions)) //
-                .filter(Objects::nonNull) //
-                .findAny() //
+        return failoverList.stream()
+                .map(failover -> failover.getOneAvailableExclude(exclusions))
+                .filter(Objects::nonNull)
+                .findAny()
                 .orElse(null);
     }
 
     @Override
     public List<T> getAvailableExclude(Collection<T> exclusions) {
-        return failoverList.stream() //
-                .map(failover -> failover.getAvailableExclude(exclusions)) //
-                .flatMap(List::stream) //
+        return failoverList.stream()
+                .map(failover -> failover.getAvailableExclude(exclusions))
+                .flatMap(List::stream)
                 .collect(toList());
     }
 
     @Nullable
     @Override
     public T getOneAvailable() {
-        return failoverList.stream() //
-                .map(Failover::getOneAvailable) //
-                .filter(Objects::nonNull) //
-                .findAny() //
+        return failoverList.stream()
+                .map(Failover::getOneAvailable)
+                .filter(Objects::nonNull)
+                .findAny()
                 .orElse(null);
     }
 
     @Override
     public List<T> getAvailable(int n) {
-        return failoverList.stream() //
-                .map(failover -> failover.getAvailable(n)) //
-                .flatMap(List::stream) //
-                .limit(n) //
+        return failoverList.stream()
+                .map(failover -> failover.getAvailable(n))
+                .flatMap(List::stream)
+                .limit(n)
                 .collect(toList());
     }
 
@@ -108,17 +108,17 @@ public class ComboFailover<T> implements Failover<T>, Iterable<Failover<T>> {
 
     @Override
     public List<T> getAvailable() {
-        return failoverList.stream() //
-                .map(Failover::getAvailable) //
+        return failoverList.stream()
+                .map(Failover::getAvailable)
                 .flatMap(List::stream)//
                 .collect(toList());
     }
 
     @Override
     public Set<T> getFailed() {
-        return failoverList.stream() //
-                .map(Failover::getFailed) //
-                .flatMap(Set::stream) //
+        return failoverList.stream()
+                .map(Failover::getFailed)
+                .flatMap(Set::stream)
                 .collect(toSet());
     }
 

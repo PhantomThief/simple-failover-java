@@ -1,6 +1,6 @@
+*.class
 .idea
 *.iml
-*.class
 
 # Mobile Tools for Java (J2ME)
 .mtj.tmp/
@@ -18,4 +18,9 @@ hs_err_pid*
 .settings
 .classpath
 
-.README.md.html 
+.DS_Store
+
+.README.md.html
+
+pom.xml.releaseBackup
+release.properties

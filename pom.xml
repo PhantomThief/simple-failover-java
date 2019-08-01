@@ -10,7 +10,7 @@
         <guava.version>21.0</guava.version>
         <jsr305.version>3.0.2</jsr305.version>
 
-        <junit.version>5.5.0</junit.version>
+        <junit.version>5.5.1</junit.version>
         <logback-classic.version>1.2.3</logback-classic.version>
 
         <maven-surefire-plugin.version>3.0.0-M3</maven-surefire-plugin.version>

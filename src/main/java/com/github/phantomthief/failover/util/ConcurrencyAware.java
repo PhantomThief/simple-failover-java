@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.RandomAccess;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.annotation.Nonnull;
@@ -41,7 +42,7 @@ public class ConcurrencyAware<T> {
     @Nullable
     private T selectIdlest(@Nonnull Iterable<T> candidates) {
         checkNotNull(candidates);
-        if (candidates instanceof List) {
+        if (candidates instanceof List && candidates instanceof RandomAccess) {
             List<T> candidatesCol = (List<T>) candidates;
             T t = selectIdlestFast(candidatesCol);
             if (t != null) {

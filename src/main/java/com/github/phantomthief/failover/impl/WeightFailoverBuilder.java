@@ -19,9 +19,11 @@ import java.util.function.ToDoubleFunction;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
+import com.github.phantomthief.failover.backoff.BackOff;
 import com.github.phantomthief.util.ThrowableFunction;
 import com.github.phantomthief.util.ThrowablePredicate;
 
@@ -39,13 +41,14 @@ public class WeightFailoverBuilder<T> {
 
     Map<T, Integer> initWeightMap;
     ToDoubleFunction<T> checker;
+    BackOff backOff;
     long checkDuration;
     Consumer<T> onMinWeight;
     Consumer<T> onRecovered;
     int minWeight = 0;
     Integer weightOnMissingNode;
     String name;
-    
+
     Predicate<T> filter = alwaysTrue();
 
     @CheckReturnValue
@@ -148,8 +151,18 @@ public class WeightFailoverBuilder<T> {
     @SuppressWarnings("unchecked")
     @CheckReturnValue
     @Nonnull
-    public <E> WeightFailoverBuilder<E>
-            checker(@Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker) {
+    public <E> WeightFailoverBuilder<E> checker(
+            @Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker) {
+        checkNotNull(failChecker);
+        return checker(failChecker, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    @CheckReturnValue
+    @Nonnull
+    public <E> WeightFailoverBuilder<E> checker(
+            @Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker,
+            @Nullable BackOff backOff) {
         checkNotNull(failChecker);
         WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
         thisBuilder.checker = t -> {
@@ -160,6 +173,7 @@ public class WeightFailoverBuilder<T> {
                 return 0;
             }
         };
+        thisBuilder.backOff = backOff;
         return thisBuilder;
     }
 
@@ -171,7 +185,19 @@ public class WeightFailoverBuilder<T> {
             @Nonnegative double recoveredInitRate) {
         checkArgument(recoveredInitRate >= 0 && recoveredInitRate <= 1);
         checkNotNull(failChecker);
-        return checker(it -> failChecker.test(it) ? recoveredInitRate : 0);
+        return checker(failChecker, recoveredInitRate, null);
+    }
+
+    @SuppressWarnings("unchecked")
+    @CheckReturnValue
+    @Nonnull
+    public <E> WeightFailoverBuilder<E> checker(
+            @Nonnull ThrowablePredicate<? super E, Throwable> failChecker,
+            @Nonnegative double recoveredInitRate,
+            @Nullable BackOff backOff) {
+        checkArgument(recoveredInitRate >= 0 && recoveredInitRate <= 1);
+        checkNotNull(failChecker);
+        return checker(it -> failChecker.test(it) ? recoveredInitRate : 0, backOff);
     }
 
     @Nonnull

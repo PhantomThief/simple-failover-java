@@ -28,6 +28,7 @@ import org.apache.commons.math3.stat.inference.BinomialTest;
 import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.Failover;
+import com.github.phantomthief.failover.backoff.FixedBackOff;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multiset;
@@ -166,6 +167,49 @@ class WeightFailoverTest {
         assertEquals(0, failover.currentWeight("s2"));
         sleepUninterruptibly(2, SECONDS);
         assertEquals(1, failover.currentWeight("s2"));
+    }
+
+    @Test
+    void testBackOffRecover() {
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .checker(it -> true, 0.00001, new FixedBackOff(500, 3))
+                .checkDuration(200, MILLISECONDS)
+                .build(of("s1", "s2"), 100);
+        assertEquals(100, failover.currentWeight("s1"));
+        assertEquals(100, failover.currentWeight("s2"));
+        failover.down("s2");
+        assertEquals(0, failover.currentWeight("s2"));
+        sleepUninterruptibly(1, SECONDS);
+        assertEquals(1, failover.currentWeight("s2"));
+    }
+
+    @Test
+    void testBackOffRecover2() {
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .checker(it -> true, 0.00001, new FixedBackOff(5000, 3))
+                .checkDuration(200, MILLISECONDS)
+                .build(of("s1", "s2"), 100);
+        assertEquals(100, failover.currentWeight("s1"));
+        assertEquals(100, failover.currentWeight("s2"));
+        failover.down("s2");
+        assertEquals(0, failover.currentWeight("s2"));
+        sleepUninterruptibly(1, SECONDS);
+        assertEquals(0, failover.currentWeight("s2"));
+    }
+
+    @Test
+    void testBackOffRecoverException() {
+        WeightFailover<String> failover = WeightFailover.<String> newGenericBuilder()
+                .name("test")
+                .checker(it -> { throw new RuntimeException(); }, new FixedBackOff(500, 3))
+                .checkDuration(200, MILLISECONDS)
+                .build(of("s1", "s2"), 100);
+        assertEquals(100, failover.currentWeight("s1"));
+        assertEquals(100, failover.currentWeight("s2"));
+        failover.down("s2");
+        assertEquals(0, failover.currentWeight("s2"));
+        sleepUninterruptibly(1, SECONDS);
+        assertEquals(0, failover.currentWeight("s2"));
     }
 
     @Test

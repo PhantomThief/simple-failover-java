@@ -9,7 +9,9 @@ import java.util.function.Predicate;
 import javax.annotation.CheckReturnValue;
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
+import com.github.phantomthief.failover.backoff.BackOff;
 import com.github.phantomthief.util.ThrowableFunction;
 import com.github.phantomthief.util.ThrowablePredicate;
 
@@ -96,9 +98,18 @@ public class GenericWeightFailoverBuilder<E> {
 
     @CheckReturnValue
     @Nonnull
-    public GenericWeightFailoverBuilder<E>
-            checker(@Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker) {
+    public GenericWeightFailoverBuilder<E> checker(
+            @Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker) {
         builder.checker(failChecker);
+        return this;
+    }
+
+    @CheckReturnValue
+    @Nonnull
+    public GenericWeightFailoverBuilder<E> checker(
+            @Nonnull ThrowableFunction<? super E, Double, Throwable> failChecker,
+            @Nullable BackOff backOff) {
+        builder.checker(failChecker, backOff);
         return this;
     }
 
@@ -108,6 +119,16 @@ public class GenericWeightFailoverBuilder<E> {
             @Nonnull ThrowablePredicate<? super E, Throwable> failChecker,
             @Nonnegative double recoveredInitRate) {
         builder.checker(failChecker, recoveredInitRate);
+        return this;
+    }
+
+    @CheckReturnValue
+    @Nonnull
+    public GenericWeightFailoverBuilder<E> checker(
+            @Nonnull ThrowablePredicate<? super E, Throwable> failChecker,
+            @Nonnegative double recoveredInitRate,
+            @Nullable BackOff backOff) {
+        builder.checker(failChecker, recoveredInitRate, backOff);
         return this;
     }
 

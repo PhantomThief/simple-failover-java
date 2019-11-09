@@ -1,8 +1,13 @@
 package com.github.phantomthief.failover.impl;
 
 import static com.github.phantomthief.tuple.Tuple.tuple;
+import static com.github.phantomthief.util.MoreFunctions.catching;
+import static com.github.phantomthief.util.MoreFunctions.runCatching;
+import static com.github.phantomthief.util.MoreFunctions.runWithThreadName;
+import static com.github.phantomthief.util.MoreFunctions.supplyWithThreadName;
 import static com.github.phantomthief.util.MoreSuppliers.lazy;
 import static com.google.common.primitives.Ints.constrainToRange;
+import static com.google.common.util.concurrent.Futures.addCallback;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
@@ -21,20 +26,30 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
+import java.util.function.ToDoubleFunction;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 import org.slf4j.Logger;
 
 import com.github.phantomthief.failover.Failover;
+import com.github.phantomthief.failover.backoff.BackOff;
+import com.github.phantomthief.failover.backoff.BackOffExecution;
 import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
 import com.github.phantomthief.tuple.TwoTuple;
 import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * 默认权重记录
@@ -47,14 +62,19 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     private static final Logger logger = getLogger(WeightFailover.class);
 
+    private final String name;
+
     private final IntUnaryOperator failReduceWeight;
     private final IntUnaryOperator successIncreaseWeight;
 
     private final ConcurrentMap<T, Integer> initWeightMap;
     private final ConcurrentMap<T, Integer> currentWeightMap;
     private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
+    private final ConcurrentLinkedQueue<RecoveryTask> recoveryTasks;
+    private final ConcurrentMap<T, RecoveryTask> runningRecoveryTasks;
     private final Consumer<T> onMinWeight;
     private final int minWeight;
+    private final ToDoubleFunction<T> checker;
 
     /**
      * {@code null} if this feature is off.
@@ -69,6 +89,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     private volatile boolean closed;
 
     WeightFailover(WeightFailoverBuilder<T> builder) {
+        this.name = builder.name;
         this.minWeight = builder.minWeight;
         this.failReduceWeight = builder.failReduceWeight;
         this.successIncreaseWeight = builder.successIncreaseWeight;
@@ -77,48 +98,110 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         this.onMinWeight = builder.onMinWeight;
         this.weightOnMissingNode = builder.weightOnMissingNode;
         this.filter = builder.filter;
-        this.recoveryFuture = lazy(
-                () -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
-                    if (closed) {
-                        tryCloseRecoveryScheduler();
-                        return;
-                    }
-                    Thread currentThread = Thread.currentThread();
-                    String origName = currentThread.getName();
-                    if (builder.name != null) {
-                        currentThread.setName(origName + "-[" + builder.name + "]");
-                    }
-                    try {
-                        Map<T, Double> recoveredObjects = new HashMap<>();
-                        this.currentWeightMap.forEach((obj, weight) -> {
-                            if (weight == 0) {
-                                double recoverRate = builder.checker.applyAsDouble(obj);
-                                if (recoverRate > 0) {
-                                    recoveredObjects.put(obj, recoverRate);
-                                }
-                            }
-                        });
-                        if (!recoveredObjects.isEmpty()) {
-                            logger.info("found recovered objects:{}", recoveredObjects);
+        this.checker = builder.checker;
+        this.recoveryTasks = new ConcurrentLinkedQueue<>();
+        this.runningRecoveryTasks = new ConcurrentHashMap<>();
+        this.recoveryFuture = builder.backOff == null ? initDefaultChecker(builder) : initBackOffChecker(builder);
+    }
+
+    private CloseableSupplier<ScheduledFuture<?>> initDefaultChecker(WeightFailoverBuilder<T> builder) {
+        return lazy(() -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
+            if (closed) {
+                tryCloseRecoveryScheduler();
+                return;
+            }
+            Thread currentThread = Thread.currentThread();
+            String origName = currentThread.getName();
+            if (builder.name != null) {
+                currentThread.setName(origName + "-[" + builder.name + "]");
+            }
+            try {
+                Map<T, Double> recoveredObjects = new HashMap<>();
+                this.currentWeightMap.forEach((obj, weight) -> {
+                    if (weight == 0) {
+                        double recoverRate = builder.checker.applyAsDouble(obj);
+                        if (recoverRate > 0) {
+                            recoveredObjects.put(obj, recoverRate);
                         }
-                        recoveredObjects.forEach((recovered, rate) -> {
-                            Integer initWeight = initWeightMap.get(recovered);
-                            if (initWeight == null) {
-                                throw new IllegalStateException("obj:" + recovered);
-                            }
-                            int recoveredWeight = constrainToRange((int) (initWeight * rate), 1,
-                                    initWeight);
-                            currentWeightMap.put(recovered, recoveredWeight);
-                            if (builder.onRecovered != null) {
-                                builder.onRecovered.accept(recovered);
-                            }
-                        });
-                    } catch (Throwable e) {
-                        logger.error("", e);
-                    } finally {
-                        currentThread.setName(origName);
                     }
-                }, builder.checkDuration, builder.checkDuration, MILLISECONDS));
+                });
+                if (!recoveredObjects.isEmpty()) {
+                    logger.info("found recovered objects:{}", recoveredObjects);
+                }
+                recoveredObjects.forEach((recovered, rate) -> {
+                    Integer initWeight = initWeightMap.get(recovered);
+                    if (initWeight == null) {
+                        throw new IllegalStateException("obj:" + recovered);
+                    }
+                    int recoveredWeight = constrainToRange((int) (initWeight * rate), 1,
+                            initWeight);
+                    currentWeightMap.put(recovered, recoveredWeight);
+                    if (builder.onRecovered != null) {
+                        builder.onRecovered.accept(recovered);
+                    }
+                });
+            } catch (Throwable e) {
+                logger.error("", e);
+            } finally {
+                currentThread.setName(origName);
+            }
+        }, builder.checkDuration, builder.checkDuration, MILLISECONDS));
+    }
+
+    private CloseableSupplier<ScheduledFuture<?>> initBackOffChecker(WeightFailoverBuilder<T> builder) {
+        return lazy(() -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
+            if (closed) {
+                tryCloseRecoveryScheduler();
+                return;
+            }
+            // 为权重为 0 的资源创建健康检查任务，放入待检查队列
+            this.currentWeightMap.entrySet().stream()
+                    .filter(entry -> entry.getValue() == 0)
+                    .forEach((entry -> recoveryTasks.offer(new RecoveryTask(entry.getKey(), builder.backOff))));
+            // 如果队列不为空则将其转发到 scheduler
+            if (!recoveryTasks.isEmpty()) {
+                while (true) {
+                    RecoveryTask task = recoveryTasks.poll();
+                    if (task == null) {
+                        break;
+                    }
+                    // 如果健康检查耗时超过 checkDuration，可能导致对同一资源发起多次 hc 请求，这里规避一下
+                    if (runningRecoveryTasks.containsKey(task.getObj())) {
+                        continue;
+                    }
+                    T obj = task.getObj();
+                    // 新建的 task 将其放入 running 队列中
+                    runningRecoveryTasks.put(obj, task);
+                    // 与外层共用一个线程池，貌似也没什么不妥...
+                    ListenableFuture<Integer> future =
+                            SharedCheckExecutorHolder.getInstance().schedule(task, task.nextBackOff(), MILLISECONDS);
+                    addCallback(future, new FutureCallback<Integer>() {
+                        @Override
+                        public void onSuccess(@Nullable Integer recoveredWeight) {
+                            runWithThreadName(origin -> origin + "-[" + name + "]", () -> runCatching(() -> {
+                                // 不管成不成功执行完毕先将 task 删除
+                                runningRecoveryTasks.remove(obj);
+                                // 如果检查失败再次将其放入待检查队列，delay 时间顺延到下一周期
+                                if (recoveredWeight == null || recoveredWeight == 0) {
+                                    recoveryTasks.offer(task);
+                                } else {
+                                    currentWeightMap.put(obj, recoveredWeight);
+                                    if (builder.onRecovered != null) {
+                                        builder.onRecovered.accept(obj);
+                                    }
+                                }
+                            }));
+                        }
+
+                        @Override
+                        public void onFailure(@Nonnull Throwable t) {
+                            // 不管成不成功执行完毕先将 task 删除
+                            runningRecoveryTasks.remove(obj);
+                        }
+                    });
+                }
+            }
+        }, builder.checkDuration, builder.checkDuration, MILLISECONDS));
     }
 
     /**
@@ -319,4 +402,41 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     public String toString() {
         return "WeightFailover [" + initWeightMap + "]" + "@" + Integer.toHexString(hashCode());
     }
+
+    class RecoveryTask implements Callable<Integer> {
+
+        private final T obj;
+        private final BackOffExecution backOff;
+
+        RecoveryTask(T obj, BackOff backOff) {
+            this.obj = obj;
+            this.backOff = backOff.start();
+        }
+
+        @Override
+        public Integer call() throws Exception {
+            return supplyWithThreadName(origin -> origin + "-[" + name + "]", () -> catching(() -> {
+                double recoverRate = checker.applyAsDouble(obj);
+                if (recoverRate > 0) {
+                    Integer initWeight = initWeightMap.get(obj);
+                    if (initWeight == null) {
+                        throw new IllegalStateException("obj:" + obj);
+                    }
+                    return constrainToRange((int) (initWeight * recoverRate), 1, initWeight);
+                }
+                return 0;
+            }));
+        }
+
+        @Nonnull
+        T getObj() {
+            return obj;
+        }
+
+        long nextBackOff() {
+            return backOff.nextBackOff();
+        }
+
+    }
+
 }

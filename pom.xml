@@ -5,8 +5,8 @@
     <version>0.1.19-SNAPSHOT</version>
 
     <properties>
-        <more-lambdas.version>0.1.12</more-lambdas.version>
-        <slf4j-api.version>1.7.14</slf4j-api.version>
+        <more-lambdas.version>0.1.34</more-lambdas.version>
+        <slf4j-api.version>1.7.15</slf4j-api.version>
         <guava.version>21.0</guava.version>
         <jsr305.version>3.0.2</jsr305.version>
 

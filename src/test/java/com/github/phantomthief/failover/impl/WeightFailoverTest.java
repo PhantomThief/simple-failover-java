@@ -98,8 +98,6 @@ class WeightFailoverTest {
                 .checker(it -> false, 1)
                 .onMinWeight(i -> System.out.println("onMin:" + i))
                 .build(original);
-        Multiset<String> result = HashMultiset.create();
-        Multiset<Integer> getCount = HashMultiset.create();
         failover.down("1");
         for (int i = 0; i < 500; i++) {
             String available = failover.getOneAvailable();
@@ -108,8 +106,6 @@ class WeightFailoverTest {
         }
         assertEquals(new HashSet<>(failover.getAvailable()),
                 new HashSet<>(failover.getAvailable(original.size())));
-        System.out.println(getCount);
-        System.out.println(result);
     }
 
     @Test

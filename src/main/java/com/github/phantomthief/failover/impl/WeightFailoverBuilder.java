@@ -2,7 +2,6 @@ package com.github.phantomthief.failover.impl;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.base.Predicates.alwaysTrue;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static java.util.function.Function.identity;
 import static java.util.stream.Collectors.toMap;
@@ -46,7 +45,7 @@ public class WeightFailoverBuilder<T> {
     Integer weightOnMissingNode;
     String name;
     
-    Predicate<T> filter = alwaysTrue();
+    Predicate<T> filter;
 
     @CheckReturnValue
     @Nonnull

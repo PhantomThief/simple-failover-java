@@ -7,6 +7,7 @@ import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.emptySet;
+import static java.util.Collections.unmodifiableList;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.slf4j.LoggerFactory.getLogger;
@@ -29,12 +30,15 @@ import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
 
+import javax.annotation.Nullable;
+
 import org.slf4j.Logger;
 
 import com.github.phantomthief.failover.Failover;
 import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
 import com.github.phantomthief.tuple.TwoTuple;
 import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
+import com.google.common.collect.ImmutableList;
 
 /**
  * 默认权重记录
@@ -64,9 +68,11 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     /**
      * 用于实现基于上下文的重试过滤逻辑
      */
+    @Nullable
     private final Predicate<T> filter;
 
     private volatile boolean closed;
+    private volatile List<T> allAvailable;
 
     WeightFailover(WeightFailoverBuilder<T> builder) {
         this.minWeight = builder.minWeight;
@@ -77,6 +83,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         this.onMinWeight = builder.onMinWeight;
         this.weightOnMissingNode = builder.weightOnMissingNode;
         this.filter = builder.filter;
+        this.allAvailable = ImmutableList.copyOf(builder.initWeightMap.keySet());
         this.recoveryFuture = lazy(
                 () -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
                     if (closed) {
@@ -109,6 +116,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                             int recoveredWeight = constrainToRange((int) (initWeight * rate), 1,
                                     initWeight);
                             currentWeightMap.put(recovered, recoveredWeight);
+                            allAvailable = doGetAvailable();
                             if (builder.onRecovered != null) {
                                 builder.onRecovered.accept(recovered);
                             }
@@ -183,6 +191,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             }
             return result;
         });
+        allAvailable = doGetAvailable();
     }
 
     @Override
@@ -213,18 +222,27 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             }
             return result;
         });
+        allAvailable = doGetAvailable();
     }
 
     @Override
     public List<T> getAvailable() {
+        if (filter == null) {
+            return allAvailable;
+        } else {
+            return doGetAvailable();
+        }
+    }
+
+    private List<T> doGetAvailable() {
         List<T> result = new ArrayList<>(currentWeightMap.size());
         for (Entry<T, Integer> entry : currentWeightMap.entrySet()) {
             T item = entry.getKey();
-            if (entry.getValue() > 0 && filter.test(item)) {
+            if (entry.getValue() > 0 && (filter == null || filter.test(item))) {
                 result.add(item);
             }
         }
-        return result;
+        return unmodifiableList(result);
     }
 
     @Override
@@ -269,7 +287,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                     int entryWeight = candidate.getSecond();
                     if (left < entryWeight) {
                         T obj = candidate.getFirst();
-                        if (!exclusions.contains(obj) && filter.test(obj)) {
+                        if (!exclusions.contains(obj) && (filter == null || filter.test(obj))) {
                             result.add(obj);
                         }
                         if (result.size() == n) {
@@ -288,19 +306,28 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public void success(T object) {
+        boolean[] availableChanged = { false };
         currentWeightMap.compute(object, (k, oldValue) -> {
             if (oldValue == null) {
                 if (weightOnMissingNode == null) {
                     logger.warn("invalid fail obj:{}, it's not in original list.", object);
                     return null;
                 } else {
+                    availableChanged[0] = true;
                     oldValue = weightOnMissingNode;
                     initWeightMap.putIfAbsent(object, weightOnMissingNode);
                 }
             }
             int initWeight = initWeightMap.get(k);
-            return min(initWeight, oldValue + successIncreaseWeight.applyAsInt(initWeight));
+            int weight = min(initWeight, oldValue + successIncreaseWeight.applyAsInt(initWeight));
+            if (oldValue <= 0 && weight > 0) {
+                availableChanged[0] = true;
+            }
+            return weight;
         });
+        if (availableChanged[0]) {
+            allAvailable = doGetAvailable();
+        }
     }
 
     @Override

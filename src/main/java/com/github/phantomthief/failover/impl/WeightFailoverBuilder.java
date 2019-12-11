@@ -24,6 +24,7 @@ import org.slf4j.Logger;
 import com.github.phantomthief.util.ThrowableFunction;
 import com.github.phantomthief.util.ThrowablePredicate;
 
+@SuppressWarnings({"checkstyle:VisibilityModifier", "checkstyle:HiddenField"})
 public class WeightFailoverBuilder<T> {
 
     private static final Logger logger = getLogger(WeightFailoverBuilder.class);
@@ -44,7 +45,7 @@ public class WeightFailoverBuilder<T> {
     int minWeight = 0;
     Integer weightOnMissingNode;
     String name;
-    
+
     Predicate<T> filter;
 
     @CheckReturnValue

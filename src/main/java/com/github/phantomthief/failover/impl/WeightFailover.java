@@ -257,6 +257,13 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         return getAvailable(MAX_VALUE, exclusions);
     }
 
+    @Nullable
+    @Override
+    public T getOneAvailableExclude(Collection<T> exclusions) {
+        List<T> result = getAvailable(1, exclusions);
+        return result.isEmpty() ? null : result.get(0);
+    }
+
     @Override
     public List<T> getAvailable(int n) {
         return getAvailable(n, emptySet());
@@ -338,8 +345,12 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
                 .collect(toSet());
     }
 
-    double currentWeight(T obj) {
+    int currentWeight(T obj) {
         return currentWeightMap.get(obj);
+    }
+
+    int initWeight(T obj) {
+        return initWeightMap.get(obj);
     }
 
     @Override

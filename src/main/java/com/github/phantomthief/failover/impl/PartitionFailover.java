@@ -137,8 +137,7 @@ public class PartitionFailover<T> implements Failover<T>, Closeable {
         resEntry.concurrency.updateAndGet(oldValue -> Math.max(oldValue + 1, 1));
     }
 
-    // weak consistency
-    private void replaceDownResource(T object) {
+    private synchronized void replaceDownResource(T object) {
         ResEntry<T>[] resourceRefCopy = resources;
         if (resourceRefCopy.length == totalResourceSize) {
             // so there is no more resource in weightFailover

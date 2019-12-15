@@ -1,6 +1,7 @@
 package com.github.phantomthief.failover.impl;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import java.util.Collection;
 import java.util.Map;
@@ -30,27 +31,31 @@ public class PartitionFailoverBuilder<T> {
 
     @Nonnull
     public PartitionFailover<T> build(Collection<T> original) {
-        ensure();
+        checkNotNull(original);
+        ensure(original.size());
         WeightFailover<T> weightFailover = weightFailoverBuilder.build(original);
         return new PartitionFailover<>(this, weightFailover);
     }
 
     @Nonnull
     public PartitionFailover<T> build(Collection<T> original, int initWeight) {
-        ensure();
+        checkNotNull(original);
+        ensure(original.size());
         WeightFailover<T> weightFailover = weightFailoverBuilder.build(original, initWeight);
         return new PartitionFailover<>(this, weightFailover);
     }
 
     @Nonnull
     public PartitionFailover<T> build(Map<T, Integer> original) {
-        ensure();
+        checkNotNull(original);
+        ensure(original.size());
         WeightFailover<T> weightFailover = weightFailoverBuilder.build(original);
         return new PartitionFailover<>(this, weightFailover);
     }
 
-    private void ensure() {
+    private void ensure(int allResourceCount) {
         checkArgument(corePartitionSize > 0, "corePartitionSize has to be positive");
+        checkArgument(corePartitionSize <= allResourceCount, "corePartitionSize should less or equal than size of original");
     }
 
     @CheckReturnValue

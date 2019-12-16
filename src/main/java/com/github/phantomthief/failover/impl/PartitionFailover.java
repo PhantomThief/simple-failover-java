@@ -68,6 +68,10 @@ public class PartitionFailover<T> implements Failover<T>, Closeable {
         }
     }
 
+    public static <T> PartitionFailoverBuilder<T> newBuilder() {
+        return new PartitionFailoverBuilder<>();
+    }
+
     private ResEntryEx<T>[] deepCopyResource() {
         ResEntry<T>[] refCopy = resources;
         @SuppressWarnings("unchecked")

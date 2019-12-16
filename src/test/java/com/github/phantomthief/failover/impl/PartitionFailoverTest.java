@@ -132,7 +132,7 @@ class PartitionFailoverTest<T> {
     }
 
     private void testPool2(int coreSize) throws Exception {
-        PartitionFailover<Res> failover = PartitionFailoverBuilder.<Res> newBuilder()
+        PartitionFailover<Res> failover = PartitionFailover.<Res> newBuilder()
                 .checker(r -> 1.0)
                 .corePartitionSize(coreSize)
                 .reuseRecentResource(5000)

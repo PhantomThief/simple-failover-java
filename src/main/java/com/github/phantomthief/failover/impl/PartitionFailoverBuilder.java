@@ -54,7 +54,7 @@ public class PartitionFailoverBuilder<T> {
     }
 
     private void ensure(int allResourceCount) {
-        checkArgument(corePartitionSize > 0, "corePartitionSize has to be positive");
+        checkArgument(corePartitionSize >= 0, "corePartitionSize should not be negative");
         checkArgument(corePartitionSize <= allResourceCount, "corePartitionSize should less or equal than size of original");
     }
 

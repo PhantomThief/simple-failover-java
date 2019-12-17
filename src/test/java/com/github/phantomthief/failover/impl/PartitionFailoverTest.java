@@ -471,4 +471,27 @@ class PartitionFailoverTest<T> {
         assertFalse(fail.get());
     }
 
+    @Test
+    public void testZero() {
+        PartitionFailover<Res> failover = PartitionFailoverBuilder.<Res> newBuilder()
+                .checker(r -> 1.0)
+                .checkDuration(5, TimeUnit.MILLISECONDS)
+                .corePartitionSize(0)
+                .build(Arrays.asList(r0, r1, r2, r3, r4));
+        assertNull(failover.getOneAvailable());
+        assertNull(failover.getOneAvailableExclude(new ArrayList<>()));
+        assertEquals(0, failover.getAvailable().size());
+        assertEquals(0, failover.getFailed().size());
+
+        failover = PartitionFailoverBuilder.<Res> newBuilder()
+                .checker(r -> 1.0)
+                .checkDuration(5, TimeUnit.MILLISECONDS)
+                .corePartitionSize(0)
+                .build(new ArrayList<>());
+        assertNull(failover.getOneAvailable());
+        assertNull(failover.getOneAvailableExclude(new ArrayList<>()));
+        assertEquals(0, failover.getAvailable().size());
+        assertEquals(0, failover.getFailed().size());
+    }
+
 }

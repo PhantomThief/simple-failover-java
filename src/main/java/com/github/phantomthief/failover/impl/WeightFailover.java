@@ -1,31 +1,28 @@
 package com.github.phantomthief.failover.impl;
 
 import static com.github.phantomthief.tuple.Tuple.tuple;
-import static com.github.phantomthief.util.MoreSuppliers.lazy;
-import static com.google.common.primitives.Ints.constrainToRange;
 import static java.lang.Integer.MAX_VALUE;
 import static java.lang.Math.max;
 import static java.lang.Math.min;
 import static java.util.Collections.emptySet;
 import static java.util.Collections.unmodifiableList;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.stream.Collectors.toSet;
 import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
@@ -35,7 +32,6 @@ import javax.annotation.Nullable;
 import org.slf4j.Logger;
 
 import com.github.phantomthief.failover.Failover;
-import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
 import com.github.phantomthief.tuple.TwoTuple;
 import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
 import com.google.common.collect.ImmutableList;
@@ -56,7 +52,8 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     private final ConcurrentMap<T, Integer> initWeightMap;
     private final ConcurrentMap<T, Integer> currentWeightMap;
-    private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
     private final Consumer<T> onMinWeight;
     private final int minWeight;
 
@@ -71,8 +68,18 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     @Nullable
     private final Predicate<T> filter;
 
-    private volatile boolean closed;
-    private volatile List<T> allAvailable;
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    AtomicBoolean closed = new AtomicBoolean(false);
+
+    private AtomicInteger allAvailableVersion = new AtomicInteger();
+
+    @SuppressWarnings({"checkstyle:VisibilityModifier"})
+    private static class AllAvailable<T> {
+        int version;
+        List<T> allAvailable;
+    }
+
+    private volatile AllAvailable<T> allAvailable;
 
     WeightFailover(WeightFailoverBuilder<T> builder) {
         this.minWeight = builder.minWeight;
@@ -83,50 +90,12 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         this.onMinWeight = builder.onMinWeight;
         this.weightOnMissingNode = builder.weightOnMissingNode;
         this.filter = builder.filter;
-        this.allAvailable = ImmutableList.copyOf(builder.initWeightMap.keySet());
-        this.recoveryFuture = lazy(
-                () -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(() -> {
-                    if (closed) {
-                        tryCloseRecoveryScheduler();
-                        return;
-                    }
-                    Thread currentThread = Thread.currentThread();
-                    String origName = currentThread.getName();
-                    if (builder.name != null) {
-                        currentThread.setName(origName + "-[" + builder.name + "]");
-                    }
-                    try {
-                        Map<T, Double> recoveredObjects = new HashMap<>();
-                        this.currentWeightMap.forEach((obj, weight) -> {
-                            if (weight == 0) {
-                                double recoverRate = builder.checker.applyAsDouble(obj);
-                                if (recoverRate > 0) {
-                                    recoveredObjects.put(obj, recoverRate);
-                                }
-                            }
-                        });
-                        if (!recoveredObjects.isEmpty()) {
-                            logger.info("found recovered objects:{}", recoveredObjects);
-                        }
-                        recoveredObjects.forEach((recovered, rate) -> {
-                            Integer initWeight = initWeightMap.get(recovered);
-                            if (initWeight == null) {
-                                throw new IllegalStateException("obj:" + recovered);
-                            }
-                            int recoveredWeight = constrainToRange((int) (initWeight * rate), 1,
-                                    initWeight);
-                            currentWeightMap.put(recovered, recoveredWeight);
-                            allAvailable = doGetAvailable();
-                            if (builder.onRecovered != null) {
-                                builder.onRecovered.accept(recovered);
-                            }
-                        });
-                    } catch (Throwable e) {
-                        logger.error("", e);
-                    } finally {
-                        currentThread.setName(origName);
-                    }
-                }, builder.checkDuration, builder.checkDuration, MILLISECONDS));
+        this.allAvailable = new AllAvailable<>();
+        this.allAvailable.allAvailable = ImmutableList.copyOf(builder.initWeightMap.keySet());
+        this.allAvailable.version = allAvailableVersion.get();
+        WeightFailoverCheckTask t = new WeightFailoverCheckTask<>(this, builder, closed,
+                initWeightMap, currentWeightMap, allAvailableVersion);
+        this.recoveryFuture = t.lazyFuture();
     }
 
     /**
@@ -142,19 +111,21 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     }
 
     @Override
-    public synchronized void close() {
-        closed = true;
-        tryCloseRecoveryScheduler();
+    public void close() {
+        closed.set(true);
+        tryCloseRecoveryScheduler(recoveryFuture, this.toString());
     }
 
-    private void tryCloseRecoveryScheduler() {
-        recoveryFuture.ifPresent(future -> {
-            if (!future.isCancelled()) {
-                if (!future.cancel(true)) {
-                    logger.warn("fail to close failover:{}", this);
+    static void tryCloseRecoveryScheduler(CloseableSupplier<ScheduledFuture<?>> recoveryFuture, String name) {
+        synchronized (recoveryFuture) {
+            recoveryFuture.ifPresent(future -> {
+                if (!future.isCancelled()) {
+                    if (!future.cancel(true)) {
+                        logger.warn("fail to close failover:{}", name);
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     @Override
@@ -191,7 +162,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             }
             return result;
         });
-        allAvailable = doGetAvailable();
+        allAvailableVersion.incrementAndGet();
     }
 
     @Override
@@ -222,13 +193,22 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             }
             return result;
         });
-        allAvailable = doGetAvailable();
+        allAvailableVersion.incrementAndGet();
     }
 
     @Override
     public List<T> getAvailable() {
-        if (filter == null) {
-            return allAvailable;
+        int version = allAvailableVersion.get();
+        boolean refreshed = false;
+        if (allAvailable.version != version) {
+            refreshed = true;
+            AllAvailable tmp = new AllAvailable<>();
+            tmp.version = version;
+            tmp.allAvailable = doGetAvailable();
+            allAvailable = tmp;
+        }
+        if (filter == null || refreshed) {
+            return allAvailable.allAvailable;
         } else {
             return doGetAvailable();
         }
@@ -333,7 +313,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             return weight;
         });
         if (availableChanged[0]) {
-            allAvailable = doGetAvailable();
+            allAvailableVersion.incrementAndGet();
         }
     }
 

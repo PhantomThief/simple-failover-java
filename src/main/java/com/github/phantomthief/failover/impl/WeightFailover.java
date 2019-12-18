@@ -198,6 +198,7 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
 
     @Override
     public List<T> getAvailable() {
+        // refresh if need
         int version = allAvailableVersion.get();
         boolean refreshed = false;
         if (allAvailable.version != version) {
@@ -207,10 +208,16 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
             tmp.allAvailable = doGetAvailable();
             allAvailable = tmp;
         }
-        if (filter == null || refreshed) {
+
+
+        if (filter == null) {
             return allAvailable.allAvailable;
         } else {
-            return doGetAvailable();
+            if (refreshed) {
+                return allAvailable.allAvailable;
+            } else {
+                return doGetAvailable();
+            }
         }
     }
 

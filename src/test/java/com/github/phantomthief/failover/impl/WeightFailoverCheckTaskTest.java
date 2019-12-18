@@ -16,7 +16,7 @@ import com.google.common.collect.ImmutableMap;
  */
 class WeightFailoverCheckTaskTest {
     @Test
-    public void test() {
+    public void test() throws Exception {
         WeightFailover<String> failover = WeightFailover
                 .<String>newGenericBuilder()
                 .checker(o -> 1.0)
@@ -28,12 +28,11 @@ class WeightFailoverCheckTaskTest {
         Assertions.assertTrue(recoveryFuture.isInitialized());
         failover = null;
 
-        for (int i = 0; i < 100; i++) {
-            byte[] bs = new byte[32 * 1024 * 1024];
+        for (int i = 0; i < 5000; i++) {
+            byte[] bs = new byte[1 * 1024 * 1024];
         }
 
-        failover = WeightFailover.newBuilder().checker(o -> 1.0).build(ImmutableMap.of("1", 1));
-        failover.close();
+        Thread.sleep(WeightFailoverCheckTask.CLEAN_INIT_DELAY_SECONDS * 1000);
 
         Assertions.assertTrue(closed.get());
         Assertions.assertTrue(recoveryFuture.get().isCancelled());

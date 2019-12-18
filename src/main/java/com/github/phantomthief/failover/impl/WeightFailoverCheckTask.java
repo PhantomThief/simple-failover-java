@@ -3,6 +3,7 @@ package com.github.phantomthief.failover.impl;
 import static com.github.phantomthief.util.MoreSuppliers.lazy;
 import static com.google.common.primitives.Ints.constrainToRange;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 import java.lang.ref.PhantomReference;
 import java.lang.ref.ReferenceQueue;
@@ -24,9 +25,18 @@ import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
  * @author w.vela
  * @author huangli
  */
-class WeightFailoverCheckTask<T> implements Runnable {
+
+class WeightFailoverCheckTask<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(WeightFailoverCheckTask.class);
+
+    static final int CLEAN_INIT_DELAY_SECONDS = 5;
+    private static final int CLEAN_DELAY_SECONDS = 10;
+
+    static {
+        SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(WeightFailoverCheckTask::doClean,
+                CLEAN_INIT_DELAY_SECONDS, CLEAN_DELAY_SECONDS, SECONDS);
+    }
 
     private final String failoverName;
     private final WeightFailoverBuilder<T> builder;
@@ -37,13 +47,15 @@ class WeightFailoverCheckTask<T> implements Runnable {
 
     private final CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
 
-    private final MyPhantomReference phantomReference;
+    // we need keep reference of this object
+    private final MyPhantomReference<T> phantomReference;
 
-    private static final ReferenceQueue REF_QUEUE = new ReferenceQueue();
+    private static final ReferenceQueue<WeightFailover<?>> REF_QUEUE = new ReferenceQueue<>();
 
-    private static class MyPhantomReference extends PhantomReference {
-        private WeightFailoverCheckTask task;
-        public MyPhantomReference(Object referent, ReferenceQueue q, WeightFailoverCheckTask task) {
+    private static class MyPhantomReference<X> extends PhantomReference<WeightFailover<X>> {
+        @SuppressWarnings("checkstyle:VisibilityModifier")
+        private WeightFailoverCheckTask<?> task;
+        public MyPhantomReference(WeightFailover<X> referent, ReferenceQueue<WeightFailover<?>> q, WeightFailoverCheckTask<?> task) {
             super(referent, q);
             this.task = task;
         }
@@ -59,19 +71,16 @@ class WeightFailoverCheckTask<T> implements Runnable {
         this.currentWeightMap = currentWeightMap;
         this.allAvailableVersion = allAvailableVersion;
         this.recoveryFuture = lazy(() -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(
-                this, builder.checkDuration, builder.checkDuration, MILLISECONDS));
+                this::run, builder.checkDuration, builder.checkDuration, MILLISECONDS));
 
-        phantomReference = new MyPhantomReference(failover, REF_QUEUE, this);
-
-        // do clean in constructor, so we don't need a thread
-        doClean();
+        phantomReference = new MyPhantomReference<>(failover, REF_QUEUE, this);
     }
 
     private static void doClean() {
-        MyPhantomReference ref = (MyPhantomReference) REF_QUEUE.poll();
+        MyPhantomReference<?> ref = (MyPhantomReference<?>) REF_QUEUE.poll();
         while (ref != null) {
             ref.task.close();
-            ref = (MyPhantomReference) REF_QUEUE.poll();
+            ref = (MyPhantomReference<?>) REF_QUEUE.poll();
         }
     }
 
@@ -79,7 +88,7 @@ class WeightFailoverCheckTask<T> implements Runnable {
         return recoveryFuture;
     }
 
-    public void close() {
+    private void close() {
         if (!closed.get()) {
             logger.warn("failover not released manually: {}", failoverName);
             closed.set(true);
@@ -87,8 +96,7 @@ class WeightFailoverCheckTask<T> implements Runnable {
         }
     }
 
-    @Override
-    public void run() {
+    private void run() {
         if (closed.get()) {
             return;
         }

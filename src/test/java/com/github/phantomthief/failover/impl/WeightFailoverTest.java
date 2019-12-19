@@ -77,7 +77,7 @@ class WeightFailoverTest {
         Multiset<Integer> getCount = HashMultiset.create();
         for (int i = 0; i < 500; i++) {
             List<String> available = failover.getAvailable(2);
-            assertTrue(available.size() == 2);
+            assertEquals(2, available.size());
             getCount.add(available.size());
             available.forEach(obj -> {
                 assertNotNull(obj);

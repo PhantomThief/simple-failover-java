@@ -3,6 +3,7 @@ package com.github.phantomthief.failover.util;
 import static java.lang.ThreadLocal.withInitial;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.IntStream.rangeClosed;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -32,7 +33,7 @@ class FilteredFailoverTest {
                         .collect(toList()), 10);
         blocked.add("s1");
         for (int i = 0; i < 100; i++) {
-            assertTrue(!failover.getAvailable().contains("s1"));
+            assertFalse(failover.getAvailable().contains("s1"));
             assertNotEquals("s1", failover.getOneAvailable());
         }
     }

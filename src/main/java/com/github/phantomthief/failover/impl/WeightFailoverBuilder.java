@@ -52,8 +52,7 @@ public class WeightFailoverBuilder<T> {
     @Nonnull
     public <E> WeightFailoverBuilder<E> name(String value) {
         this.name = value;
-        WeightFailoverBuilder<E> thisBuilder = (WeightFailoverBuilder<E>) this;
-        return thisBuilder;
+        return (WeightFailoverBuilder<E>) this;
     }
 
     @CheckReturnValue

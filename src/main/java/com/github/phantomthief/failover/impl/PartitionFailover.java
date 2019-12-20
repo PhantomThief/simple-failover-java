@@ -61,6 +61,9 @@ public class PartitionFailover<T> implements Failover<T>, Closeable {
         this.maxExternalPoolIdleMillis = partitionFailoverBuilder.maxExternalPoolIdleMillis;
         int corePartitionSize = partitionFailoverBuilder.corePartitionSize;
         List<T> available = weightFailover.getAvailable(corePartitionSize);
+        if (available.size() < corePartitionSize) {
+            corePartitionSize = available.size();
+        }
         this.resources = new ResEntry[corePartitionSize];
         for (int i = 0; i < corePartitionSize; i++) {
             T one = available.get(i);

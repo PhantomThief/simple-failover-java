@@ -494,4 +494,25 @@ class PartitionFailoverTest<T> {
         assertEquals(0, failover.getFailed().size());
     }
 
+    @Test
+    public void testZeroWeight() {
+        PartitionFailover<Res> failover = PartitionFailoverBuilder.<Res> newBuilder()
+                .checker(r -> 1.0)
+                .checkDuration(5, TimeUnit.MILLISECONDS)
+                .corePartitionSize(3)
+                .build(ImmutableMap.of(r0, 0, r1, 1, r2, 2));
+        assertEquals(2, failover.getAvailable().size());
+        assertEquals(3, failover.getAll().size());
+        assertEquals(1, failover.getFailed().size());
+
+        failover = PartitionFailoverBuilder.<Res> newBuilder()
+                .checker(r -> 1.0)
+                .checkDuration(5, TimeUnit.MILLISECONDS)
+                .corePartitionSize(3)
+                .build(ImmutableMap.of(r0, 0, r1, 0, r2, 0));
+        assertEquals(0, failover.getAvailable().size());
+        assertEquals(3, failover.getAll().size());
+        assertEquals(3, failover.getFailed().size());
+    }
+
 }

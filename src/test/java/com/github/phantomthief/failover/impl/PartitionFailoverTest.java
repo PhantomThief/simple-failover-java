@@ -482,6 +482,7 @@ class PartitionFailoverTest<T> {
         assertNull(failover.getOneAvailableExclude(new ArrayList<>()));
         assertEquals(0, failover.getAvailable().size());
         assertEquals(0, failover.getFailed().size());
+        assertEquals(5, failover.getAll().size());
 
         failover = PartitionFailoverBuilder.<Res> newBuilder()
                 .checker(r -> 1.0)
@@ -492,6 +493,7 @@ class PartitionFailoverTest<T> {
         assertNull(failover.getOneAvailableExclude(new ArrayList<>()));
         assertEquals(0, failover.getAvailable().size());
         assertEquals(0, failover.getFailed().size());
+        assertEquals(0, failover.getAll().size());
     }
 
     @Test

@@ -7,7 +7,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 import com.github.phantomthief.failover.util.FailoverUtils;
@@ -17,17 +16,9 @@ import com.github.phantomthief.util.ThrowableFunction;
 /**
  * @author w.vela
  */
-public interface Failover<T> {
+public interface Failover<T> extends SimpleFailover<T> {
 
     List<T> getAll();
-
-    default void success(@Nonnull T object) {
-        // default behavior: do nothing
-    }
-
-    void fail(@Nonnull T object);
-
-    void down(@Nonnull T object);
 
     /**
      * better use {@code #getAvailable(int)} or {@code #getOneAvailable()}
@@ -41,11 +32,13 @@ public interface Failover<T> {
     Set<T> getFailed();
 
     @Nullable
+    @Override
     default T getOneAvailable() {
         return getRandom(getAvailable());
     }
 
     @Nullable
+    @Override
     default T getOneAvailableExclude(Collection<T> exclusions) {
         return getRandom(getAvailableExclude(exclusions));
     }

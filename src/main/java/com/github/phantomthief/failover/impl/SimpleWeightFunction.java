@@ -19,12 +19,12 @@ public class SimpleWeightFunction<T> implements WeightFunction<T> {
 
     @Override
     public double success(double maxWeight, double minWeight, int priority, double currentOldWeight, T resource) {
-        return Math.min(currentOldWeight + maxWeight * successIncreaseRate, maxWeight);
+        return currentOldWeight + maxWeight * successIncreaseRate;
     }
 
     @Override
     public double fail(double maxWeight, double minWeight, int priority, double currentOldWeight, T resource) {
-        return Math.max(currentOldWeight - maxWeight * failDecreaseRate, minWeight);
+        return currentOldWeight - maxWeight * failDecreaseRate;
     }
 
     @Override

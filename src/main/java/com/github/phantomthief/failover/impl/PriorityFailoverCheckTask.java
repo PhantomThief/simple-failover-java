@@ -1,6 +1,5 @@
 package com.github.phantomthief.failover.impl;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -20,7 +19,7 @@ class PriorityFailoverCheckTask<T> implements Runnable {
     private volatile ScheduledFuture<?> future;
 
     private final HashMap<T, ResInfo<T>> resourcesMap;
-    private final ArrayList<PrioritySectionInfo<T>> prioritySections;
+    private final PrioritySectionInfo<T>[] prioritySections;
 
     private volatile boolean closed;
 

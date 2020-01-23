@@ -29,7 +29,9 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
     private final PriorityFailoverCheckTask<T> checkTask;
 
     private final HashMap<T, ResInfo<T>> resourcesMap;
-    private final ArrayList<PrioritySectionInfo<T>> prioritySections;
+    private final PrioritySectionInfo<T>[] prioritySections;
+
+    private final boolean concurrentCtrl;
 
     @SuppressWarnings("checkstyle:VisibilityModifier")
     static class ResInfo<T> {
@@ -66,13 +68,43 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         final int priority;
 
         @Nonnull
-        final ArrayList<ResInfo<T>> resources = new ArrayList<>();
+        final ResInfo<T>[] resources;
 
-        // the range is from 0 to 1.0
-        volatile double healthyRate = 1.0;
+        final double totalMaxWeight;
 
-        PrioritySectionInfo(int priority) {
+        final boolean maxWeightSame;
+
+        int roundRobinIndex;
+
+        volatile SectionWeightInfo sectionWeightInfo;
+
+        PrioritySectionInfo(int priority, @Nonnull ResInfo<T>[] resources, double totalMaxWeight,
+                boolean maxWeightSame, SectionWeightInfo sectionWeightInfo) {
             this.priority = priority;
+            this.resources = resources;
+            this.totalMaxWeight = totalMaxWeight;
+            this.maxWeightSame = maxWeightSame;
+            this.sectionWeightInfo = sectionWeightInfo;
+        }
+    }
+
+    @SuppressWarnings("checkstyle:VisibilityModifier")
+    static class SectionWeightInfo {
+        final boolean roundRobin;
+
+        final double totalCurrentWeight;
+
+        //
+        final double[] currentWeightCopy;
+
+        final double healthyRate;
+
+        SectionWeightInfo(double totalCurrentWeight, double healthyRate, double[] currentWeightCopy,
+                boolean roundRobin) {
+            this.totalCurrentWeight = totalCurrentWeight;
+            this.healthyRate = healthyRate;
+            this.currentWeightCopy = currentWeightCopy;
+            this.roundRobin = roundRobin;
         }
     }
 
@@ -96,11 +128,14 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         }
     }
 
+    @SuppressWarnings("unchecked")
     PriorityFailover(PriorityFailoverConfig<T> config) {
         Objects.requireNonNull(config.getResources());
         this.config = config;
-        this.resourcesMap = new HashMap<>();
-        TreeMap<Integer, PrioritySectionInfo<T>> priorityMap = new TreeMap<>();
+        int resCount = config.getResources().size();
+        this.resourcesMap = new HashMap<>(resCount * 3);
+        this.concurrentCtrl = config.isConcurrencyControl();
+        TreeMap<Integer, ArrayList<ResInfo<T>>> priorityMap = new TreeMap<>();
         for (Entry<T, ResConfig> en : config.getResources().entrySet()) {
             T res = en.getKey();
             ResConfig rc = en.getValue();
@@ -110,16 +145,39 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
             this.resourcesMap.put(res, ri);
             priorityMap.compute(priority, (k, v) -> {
                 if (v == null) {
-                    v = new PrioritySectionInfo<>(priority);
+                    v = new ArrayList<>();
                 }
-                v.resources.add(ri);
+                v.add(ri);
                 return v;
             });
         }
-        prioritySections = new ArrayList<>();
-        prioritySections.addAll(priorityMap.values());
-        for (int i = 0; i < prioritySections.size(); i++) {
-            updateSectionHealthy(i, prioritySections);
+
+        prioritySections = new PrioritySectionInfo[priorityMap.size()];
+        int sectionIndex = 0;
+        for (Entry<Integer, ArrayList<ResInfo<T>>> en : priorityMap.entrySet()) {
+            final int priority = en.getKey();
+            ArrayList<ResInfo<T>> list = en.getValue();
+            Collections.shuffle(list);
+            final ResInfo<T>[] resources = list.toArray(new ResInfo[list.size()]);
+            double totalMaxWeight = 0;
+            double totalCurrentWeight = 0;
+            double firstMaxWeight = resources[0].maxWeight;
+            boolean maxWeightSame = true;
+            double[] currentWeightCopy = new double[resources.length];
+            for (int i = 0; i < resources.length; i++) {
+                ResInfo<T> ri = resources[i];
+                totalMaxWeight += ri.maxWeight;
+                totalCurrentWeight += ri.currentWeight;
+                currentWeightCopy[i] = ri.currentWeight;
+                if (ri.maxWeight != firstMaxWeight) {
+                    maxWeightSame = false;
+                }
+            }
+            SectionWeightInfo sectionWeightInfo = new SectionWeightInfo(totalCurrentWeight,
+                    totalCurrentWeight / totalMaxWeight, currentWeightCopy,
+                    maxWeightSame && totalCurrentWeight == totalMaxWeight);
+            prioritySections[sectionIndex++] = new PrioritySectionInfo<>(priority, resources,
+                    totalMaxWeight, maxWeightSame, sectionWeightInfo);
         }
 
         checkTask = new PriorityFailoverCheckTask<>(config, this);
@@ -152,7 +210,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
     }
 
     static <T> void updateWeight(boolean success, ResInfo<T> resInfo, PriorityFailoverConfig<T> config,
-            ArrayList<PrioritySectionInfo<T>> sections) {
+            PrioritySectionInfo<T>[] sections) {
         double maxWeight = resInfo.maxWeight;
         double minWeight = resInfo.minWeight;
 
@@ -190,16 +248,21 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         }
     }
 
-    static <T> void updateSectionHealthy(int priority, ArrayList<PrioritySectionInfo<T>> sections) {
+    static <T> void updateSectionHealthy(int priority, PrioritySectionInfo<T>[] sections) {
         for (PrioritySectionInfo<T> psi : sections) {
             if (psi.priority == priority) {
-                double sumMaxWeight = 0.0;
                 double sumCurrentWeight = 0.0;
-                for (ResInfo<T> ri : psi.resources) {
-                    sumMaxWeight += ri.maxWeight;
+                ResInfo<T>[] resources = psi.resources;
+                int resCount = resources.length;
+                double[] weightCopy = new double[resCount];
+                for (int i = 0; i < resCount; i++) {
+                    ResInfo<T> ri = resources[i];
                     sumCurrentWeight += ri.currentWeight;
+                    weightCopy[i] = ri.currentWeight;
                 }
-                psi.healthyRate = sumCurrentWeight / sumMaxWeight;
+                psi.sectionWeightInfo = new SectionWeightInfo(sumCurrentWeight,
+                        sumCurrentWeight / psi.totalMaxWeight, weightCopy,
+                        psi.maxWeightSame && sumCurrentWeight == psi.totalMaxWeight);
             }
         }
     }
@@ -231,13 +294,20 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
 
     @Nullable
     @Override
-    public T getOneAvailableExclude(Collection<T> exclusions) {
-        if (prioritySections.size() == 0) {
+    public T getOneAvailableExclude(@Nonnull Collection<T> exclusions) {
+        int sectionCount = prioritySections.length;
+        if (sectionCount == 0) {
             return null;
         }
         ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
-        int preferSectionIndex = selectSection(threadLocalRandom);
-        for (int i = 0; i < prioritySections.size(); i++) {
+        int preferSectionIndex;
+        if (sectionCount == 1) {
+            preferSectionIndex = 0;
+        } else {
+            preferSectionIndex = selectSection(threadLocalRandom);
+        }
+
+        for (int i = 0; i < sectionCount; i++) {
             ResInfo<T> ri = findOneInRegion(threadLocalRandom, preferSectionIndex, exclusions);
             if (ri != null) {
                 if (ri.concurrency != null) {
@@ -245,74 +315,94 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
                 }
                 return ri.resource;
             }
-            preferSectionIndex = (preferSectionIndex + 1) % prioritySections.size();
+            preferSectionIndex = (preferSectionIndex + 1) % sectionCount;
         }
         return null;
     }
 
     private ResInfo<T> findOneInRegion(ThreadLocalRandom threadLocalRandom, int preferSectionIndex,
-            Collection<T> exclusions) {
-        PrioritySectionInfo<T> sectionInfo = prioritySections.get(preferSectionIndex);
-        double sumWeight = 0;
+            @Nonnull Collection<T> exclusions) {
+        PrioritySectionInfo<T> sectionInfo = prioritySections[preferSectionIndex];
+        ResInfo<T>[] resources = sectionInfo.resources;
+        int resCount = resources.length;
 
-        double[] weights = new double[sectionInfo.resources.size()];
-        if (exclusions.size() == weights.length) {
-            return null;
-        }
-
-        for (int i = 0; i < weights.length; i++) {
-            ResInfo<T> ri = sectionInfo.resources.get(i);
-            if (!exclusions.contains(ri.resource)) {
-                double w = ri.currentWeight;
-                if (ri.concurrency != null) {
-                    int c = ri.concurrency.get();
-                    w = w / (1.0 + c);
+        SectionWeightInfo sectionWeightInfo = sectionInfo.sectionWeightInfo;
+        boolean conCtrl = this.concurrentCtrl;
+        if (exclusions.isEmpty() && !conCtrl) {
+            if (sectionWeightInfo.roundRobin) {
+                int roundRobinIndex = sectionInfo.roundRobinIndex;
+                sectionInfo.roundRobinIndex = (roundRobinIndex + 1) % resCount;
+                return resources[roundRobinIndex];
+            } else {
+                double totalCurrentWeight = sectionWeightInfo.totalCurrentWeight;
+                if (totalCurrentWeight <= 0) {
+                    return null;
                 }
-                sumWeight += w;
-                weights[i] = w;
-            } else {
-                weights[i] = -1;
-            }
-        }
-        if (sumWeight <= 0) {
-            return null;
-        }
-        double random = threadLocalRandom.nextDouble(sumWeight);
-        double x = 0;
-        for (int i = 0; i < weights.length; i++) {
-            if (weights[i] < 0) {
-                continue;
-            } else {
-                x += weights[i];
-            }
-            if (random < x) {
-                return sectionInfo.resources.get(i);
-            }
-        }
-
-        // something wrong or there are float precision problem,
-        // return first one which is not excluded
-        for (int i = 0; i < weights.length; i++) {
-            if (weights[i] > 0) {
-                ResInfo<T> resInfo = sectionInfo.resources.get(i);
-                if (!exclusions.contains(resInfo.resource)) {
-                    return resInfo;
+                double random = threadLocalRandom.nextDouble(totalCurrentWeight);
+                double x = 0;
+                double[] weightCopy = sectionWeightInfo.currentWeightCopy;
+                for (int i = 0; i < resCount; i++) {
+                    x += weightCopy[i];
+                    if (random < x) {
+                        return resources[i];
+                    }
                 }
             }
+        } else {
+            double sumWeight = 0;
+            double[] weights = new double[resCount];
+            double[] weightCopy = sectionWeightInfo.currentWeightCopy;
+            for (int i = 0; i < resCount; i++) {
+                ResInfo<T> ri = resources[i];
+                if (!exclusions.contains(ri.resource)) {
+                    double w = weightCopy[i];
+                    if (conCtrl) {
+                        int c = ri.concurrency.get();
+                        w = w / (1.0 + c);
+                    }
+                    weights[i] = w;
+                    sumWeight += w;
+                } else {
+                    weights[i] = -1;
+                }
+            }
+
+            if (sumWeight <= 0) {
+                return null;
+            }
+            double random = threadLocalRandom.nextDouble(sumWeight);
+            double x = 0;
+            for (int i = 0; i < resCount; i++) {
+                double w = weights[i];
+                if (w < 0) {
+                    continue;
+                } else {
+                    x += w;
+                }
+                if (random < x) {
+                    return resources[i];
+                }
+            }
         }
 
-        // assert false;
+        // maybe precise problem, return first one which is not excluded
+        for (ResInfo<T> ri : resources) {
+            if (ri.currentWeight > 0 && !exclusions.contains(ri.resource)) {
+                return ri;
+            }
+        }
+
         return null;
     }
 
     int selectSection(ThreadLocalRandom random) {
-        if (prioritySections.size() == 1) {
-            return 0;
-        }
+        PrioritySectionInfo<T>[] sections = this.prioritySections;
+        int sectionCount = sections.length;
         double factor = config.getPriorityFactor();
         double sectionRandom = -1.0;
-        for (int i = 0; i < prioritySections.size(); i++) {
-            double healthyRate = prioritySections.get(i).healthyRate;
+        for (int i = 0; i < sectionCount; i++) {
+            PrioritySectionInfo<T> section = sections[i];
+            double healthyRate = section.sectionWeightInfo.healthyRate;
             if (factor == Double.MAX_VALUE && healthyRate > 0) {
                 return i;
             }
@@ -343,7 +433,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         return resourcesMap;
     }
 
-    ArrayList<PrioritySectionInfo<T>> getPrioritySections() {
+    PrioritySectionInfo<T>[] getPrioritySections() {
         return prioritySections;
     }
 

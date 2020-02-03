@@ -4,7 +4,7 @@ import java.util.HashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
-import com.github.phantomthief.failover.impl.PriorityFailover.PrioritySectionInfo;
+import com.github.phantomthief.failover.impl.PriorityFailover.GroupInfo;
 import com.github.phantomthief.failover.impl.PriorityFailover.ResInfo;
 import com.github.phantomthief.failover.impl.PriorityFailoverBuilder.PriorityFailoverConfig;
 
@@ -19,14 +19,14 @@ class PriorityFailoverCheckTask<T> implements Runnable {
     private volatile ScheduledFuture<?> future;
 
     private final HashMap<T, ResInfo<T>> resourcesMap;
-    private final PrioritySectionInfo<T>[] prioritySections;
+    private final GroupInfo<T>[] groups;
 
     private volatile boolean closed;
 
     PriorityFailoverCheckTask(PriorityFailoverConfig<T> config, PriorityFailover<T> failover) {
         this.config = config;
         this.resourcesMap = failover.getResourcesMap();
-        this.prioritySections = failover.getPrioritySections();
+        this.groups = failover.getGroups();
         if (config.getChecker() != null) {
             if (config.isStartCheckTaskImmediately()) {
                 ensureStart();
@@ -75,7 +75,7 @@ class PriorityFailoverCheckTask<T> implements Runnable {
                     if (closed) {
                         return;
                     }
-                    PriorityFailover.updateWeight(ok, r, config, prioritySections);
+                    PriorityFailover.updateWeight(ok, r, config, groups);
                 }
             }
         } finally {

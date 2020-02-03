@@ -30,16 +30,10 @@ import com.github.phantomthief.failover.impl.SimpleWeightFunction;
 @Warmup(iterations = 1, time = 1)
 @Measurement(iterations = 2, time = 2)
 @State(Scope.Benchmark)
-public class Section2PriorityFailover {
+public class Group1PriorityFailover {
 
-    @Param({"1000"})
+    @Param({"5", "20", "100", "200", "1000"})
     private int totalSize;
-
-    @Param({"5", "20"})
-    private int coreSize;
-
-    @Param({"true", "false"})
-    private boolean concurrencyCtrl;
 
     private static final int FAIL_RATE = 999;
 
@@ -51,13 +45,8 @@ public class Section2PriorityFailover {
     public void init() {
         PriorityFailoverBuilder<String> builder = PriorityFailover.<String> newBuilder();
         for (int i = 0; i < totalSize; i++) {
-            if (i < coreSize) {
-                builder.addResource("key" + i, 100, 0, 0, 100);
-            } else {
-                builder.addResource("key" + i, 100, 0, 1, 100);
-            }
+            builder.addResource("key" + i, 100);
         }
-        builder.concurrencyControl(concurrencyCtrl);
         builder.weightFunction(new SimpleWeightFunction<>(0.01, 1.0));
         priorityFailover = builder.build();
     }
@@ -87,24 +76,22 @@ public class Section2PriorityFailover {
         boolean useJmh = true;
         if (useJmh) {
             Options options = new OptionsBuilder()
-                    .include(Section2PriorityFailover.class.getSimpleName())
-                    .output(System.getProperty("user.home") + "/" + Section2PriorityFailover.class.getSimpleName()
+                    .include(Group1PriorityFailover.class.getSimpleName())
+                    .output(System.getProperty("user.home") + "/" + Group1PriorityFailover.class.getSimpleName()
                             + ".txt")
                     .build();
             new Runner(options).run();
         } else {
-            Section2PriorityFailover obj = new Section2PriorityFailover();
-            obj.totalSize = 1000;
-            obj.coreSize = 5;
-            obj.concurrencyCtrl = true;
+            Group1PriorityFailover obj = new Group1PriorityFailover();
+            obj.totalSize = 5;
             obj.init();
-            int loopCount = 5000_0000;
+            int loopCount = 1_0000_0000;
             for (int i = 0; i < 100000; i++) {
-                obj.getOneSuccess();
+                obj.getOneFail();
             }
             long start = System.nanoTime();
             for (int i = 0; i < loopCount; i++) {
-                obj.getOneSuccess();
+                obj.getOneFail();
             }
             long end = System.nanoTime();
             double seconds = (end - start) / 1000.0 / 1000.0 / 1000.0;

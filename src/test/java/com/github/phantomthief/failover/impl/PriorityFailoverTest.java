@@ -90,7 +90,7 @@ class PriorityFailoverTest {
     }
 
     @Test
-    public void testSelectSection() {
+    public void testSelectGroup() {
         ThreadLocalRandom random = ThreadLocalRandom.current();
         try (PriorityFailover<Object> failover = PriorityFailover.newBuilder()
                 .addResource(o0, 100, 0, 0, 100)
@@ -98,7 +98,7 @@ class PriorityFailoverTest {
                 .priorityFactor(2.0)
                 .build()) {
             for (int i = 0; i < 10; i++) {
-                assertEquals(0, failover.selectSection(random));
+                assertEquals(0, failover.selectGroup(random));
             }
         }
         try (PriorityFailover<Object> failover = PriorityFailover.newBuilder()
@@ -109,7 +109,7 @@ class PriorityFailoverTest {
             int c0 = 0, c1 = 0;
             int totalCount = 10000;
             for (int i = 0; i < totalCount; i++) {
-                int x = failover.selectSection(random);
+                int x = failover.selectGroup(random);
                 if (x == 0) {
                     c0++;
                 } else {
@@ -127,7 +127,7 @@ class PriorityFailoverTest {
             int c0 = 0, c1 = 0, c2 = 0;
             int totalCount = 50000;
             for (int i = 0; i < totalCount; i++) {
-                int x = failover.selectSection(random);
+                int x = failover.selectGroup(random);
                 if (x == 0) {
                     c0++;
                 } else if (x == 1) {
@@ -152,7 +152,7 @@ class PriorityFailoverTest {
             int c0 = 0, c1 = 0, c2 = 0;
             int totalCount = 10000;
             for (int i = 0; i < totalCount; i++) {
-                int x = failover.selectSection(random);
+                int x = failover.selectGroup(random);
                 if (x == 0) {
                     c0++;
                 } else if (x == 1) {

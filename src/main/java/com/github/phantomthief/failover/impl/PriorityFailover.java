@@ -29,7 +29,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
     private final PriorityFailoverCheckTask<T> checkTask;
 
     private final HashMap<T, ResInfo<T>> resourcesMap;
-    private final PrioritySectionInfo<T>[] prioritySections;
+    private final GroupInfo<T>[] groups;
 
     private final boolean concurrentCtrl;
 
@@ -64,7 +64,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
     }
 
     @SuppressWarnings("checkstyle:VisibilityModifier")
-    static class PrioritySectionInfo<T> {
+    static class GroupInfo<T> {
         final int priority;
 
         @Nonnull
@@ -76,20 +76,20 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
 
         int roundRobinIndex;
 
-        volatile SectionWeightInfo sectionWeightInfo;
+        volatile GroupWeightInfo groupWeightInfo;
 
-        PrioritySectionInfo(int priority, @Nonnull ResInfo<T>[] resources, double totalMaxWeight,
-                boolean maxWeightSame, SectionWeightInfo sectionWeightInfo) {
+        GroupInfo(int priority, @Nonnull ResInfo<T>[] resources, double totalMaxWeight,
+                boolean maxWeightSame, GroupWeightInfo groupWeightInfo) {
             this.priority = priority;
             this.resources = resources;
             this.totalMaxWeight = totalMaxWeight;
             this.maxWeightSame = maxWeightSame;
-            this.sectionWeightInfo = sectionWeightInfo;
+            this.groupWeightInfo = groupWeightInfo;
         }
     }
 
     @SuppressWarnings("checkstyle:VisibilityModifier")
-    static class SectionWeightInfo {
+    static class GroupWeightInfo {
         final boolean roundRobin;
 
         final double totalCurrentWeight;
@@ -99,7 +99,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
 
         final double healthyRate;
 
-        SectionWeightInfo(double totalCurrentWeight, double healthyRate, double[] currentWeightCopy,
+        GroupWeightInfo(double totalCurrentWeight, double healthyRate, double[] currentWeightCopy,
                 boolean roundRobin) {
             this.totalCurrentWeight = totalCurrentWeight;
             this.healthyRate = healthyRate;
@@ -152,8 +152,8 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
             });
         }
 
-        prioritySections = new PrioritySectionInfo[priorityMap.size()];
-        int sectionIndex = 0;
+        groups = new GroupInfo[priorityMap.size()];
+        int groupIndex = 0;
         for (Entry<Integer, ArrayList<ResInfo<T>>> en : priorityMap.entrySet()) {
             final int priority = en.getKey();
             ArrayList<ResInfo<T>> list = en.getValue();
@@ -173,11 +173,11 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
                     maxWeightSame = false;
                 }
             }
-            SectionWeightInfo sectionWeightInfo = new SectionWeightInfo(totalCurrentWeight,
+            GroupWeightInfo groupWeightInfo = new GroupWeightInfo(totalCurrentWeight,
                     totalCurrentWeight / totalMaxWeight, currentWeightCopy,
                     maxWeightSame && totalCurrentWeight == totalMaxWeight);
-            prioritySections[sectionIndex++] = new PrioritySectionInfo<>(priority, resources,
-                    totalMaxWeight, maxWeightSame, sectionWeightInfo);
+            groups[groupIndex++] = new GroupInfo<>(priority, resources,
+                    totalMaxWeight, maxWeightSame, groupWeightInfo);
         }
 
         checkTask = new PriorityFailoverCheckTask<>(config, this);
@@ -206,11 +206,11 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         if (resInfo.concurrency != null) {
             resInfo.concurrency.decr();
         }
-        updateWeight(success, resInfo, config, prioritySections);
+        updateWeight(success, resInfo, config, groups);
     }
 
     static <T> void updateWeight(boolean success, ResInfo<T> resInfo, PriorityFailoverConfig<T> config,
-            PrioritySectionInfo<T>[] sections) {
+            GroupInfo<T>[] groups) {
         double maxWeight = resInfo.maxWeight;
         double minWeight = resInfo.minWeight;
 
@@ -236,7 +236,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
 
         resInfo.currentWeight = newWeight;
 
-        updateSectionHealthy(priority, sections);
+        updateGroupHealthy(priority, groups);
 
         WeightListener<T> listener = config.getWeightListener();
         if (listener != null) {
@@ -248,8 +248,8 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         }
     }
 
-    static <T> void updateSectionHealthy(int priority, PrioritySectionInfo<T>[] sections) {
-        for (PrioritySectionInfo<T> psi : sections) {
+    static <T> void updateGroupHealthy(int priority, GroupInfo<T>[] groups) {
+        for (GroupInfo<T> psi : groups) {
             if (psi.priority == priority) {
                 double sumCurrentWeight = 0.0;
                 ResInfo<T>[] resources = psi.resources;
@@ -260,7 +260,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
                     sumCurrentWeight += ri.currentWeight;
                     weightCopy[i] = ri.currentWeight;
                 }
-                psi.sectionWeightInfo = new SectionWeightInfo(sumCurrentWeight,
+                psi.groupWeightInfo = new GroupWeightInfo(sumCurrentWeight,
                         sumCurrentWeight / psi.totalMaxWeight, weightCopy,
                         psi.maxWeightSame && sumCurrentWeight == psi.totalMaxWeight);
             }
@@ -277,7 +277,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
             resInfo.concurrency.decr();
         }
         resInfo.currentWeight = resInfo.minWeight;
-        updateSectionHealthy(resInfo.priority, prioritySections);
+        updateGroupHealthy(resInfo.priority, groups);
         WeightListener<T> listener = config.getWeightListener();
         if (listener != null) {
             listener.onFail(resInfo.maxWeight, resInfo.minWeight,
@@ -295,52 +295,52 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
     @Nullable
     @Override
     public T getOneAvailableExclude(@Nonnull Collection<T> exclusions) {
-        int sectionCount = prioritySections.length;
-        if (sectionCount == 0) {
+        int groupCount = groups.length;
+        if (groupCount == 0) {
             return null;
         }
         ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
-        int preferSectionIndex;
-        if (sectionCount == 1) {
-            preferSectionIndex = 0;
+        int preferGroupIndex;
+        if (groupCount == 1) {
+            preferGroupIndex = 0;
         } else {
-            preferSectionIndex = selectSection(threadLocalRandom);
+            preferGroupIndex = selectGroup(threadLocalRandom);
         }
 
-        for (int i = 0; i < sectionCount; i++) {
-            ResInfo<T> ri = findOneInRegion(threadLocalRandom, preferSectionIndex, exclusions);
+        for (int i = 0; i < groupCount; i++) {
+            ResInfo<T> ri = findOneInRegion(threadLocalRandom, preferGroupIndex, exclusions);
             if (ri != null) {
                 if (ri.concurrency != null) {
                     ri.concurrency.incr();
                 }
                 return ri.resource;
             }
-            preferSectionIndex = (preferSectionIndex + 1) % sectionCount;
+            preferGroupIndex = (preferGroupIndex + 1) % groupCount;
         }
         return null;
     }
 
-    private ResInfo<T> findOneInRegion(ThreadLocalRandom threadLocalRandom, int preferSectionIndex,
+    private ResInfo<T> findOneInRegion(ThreadLocalRandom threadLocalRandom, int preferGroupIndex,
             @Nonnull Collection<T> exclusions) {
-        PrioritySectionInfo<T> sectionInfo = prioritySections[preferSectionIndex];
-        ResInfo<T>[] resources = sectionInfo.resources;
+        GroupInfo<T> groupInfo = groups[preferGroupIndex];
+        ResInfo<T>[] resources = groupInfo.resources;
         int resCount = resources.length;
 
-        SectionWeightInfo sectionWeightInfo = sectionInfo.sectionWeightInfo;
+        GroupWeightInfo groupWeightInfo = groupInfo.groupWeightInfo;
         boolean conCtrl = this.concurrentCtrl;
         if (exclusions.isEmpty() && !conCtrl) {
-            if (sectionWeightInfo.roundRobin) {
-                int roundRobinIndex = sectionInfo.roundRobinIndex;
-                sectionInfo.roundRobinIndex = (roundRobinIndex + 1) % resCount;
+            if (groupWeightInfo.roundRobin) {
+                int roundRobinIndex = groupInfo.roundRobinIndex;
+                groupInfo.roundRobinIndex = (roundRobinIndex + 1) % resCount;
                 return resources[roundRobinIndex];
             } else {
-                double totalCurrentWeight = sectionWeightInfo.totalCurrentWeight;
+                double totalCurrentWeight = groupWeightInfo.totalCurrentWeight;
                 if (totalCurrentWeight <= 0) {
                     return null;
                 }
                 double random = threadLocalRandom.nextDouble(totalCurrentWeight);
                 double x = 0;
-                double[] weightCopy = sectionWeightInfo.currentWeightCopy;
+                double[] weightCopy = groupWeightInfo.currentWeightCopy;
                 for (int i = 0; i < resCount; i++) {
                     x += weightCopy[i];
                     if (random < x) {
@@ -351,7 +351,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         } else {
             double sumWeight = 0;
             double[] weights = new double[resCount];
-            double[] weightCopy = sectionWeightInfo.currentWeightCopy;
+            double[] weightCopy = groupWeightInfo.currentWeightCopy;
             for (int i = 0; i < resCount; i++) {
                 ResInfo<T> ri = resources[i];
                 if (!exclusions.contains(ri.resource)) {
@@ -395,14 +395,14 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         return null;
     }
 
-    int selectSection(ThreadLocalRandom random) {
-        PrioritySectionInfo<T>[] sections = this.prioritySections;
-        int sectionCount = sections.length;
+    int selectGroup(ThreadLocalRandom random) {
+        GroupInfo<T>[] gs = this.groups;
+        int groupCount = gs.length;
         double factor = config.getPriorityFactor();
-        double sectionRandom = -1.0;
-        for (int i = 0; i < sectionCount; i++) {
-            PrioritySectionInfo<T> section = sections[i];
-            double healthyRate = section.sectionWeightInfo.healthyRate;
+        double groupRandom = -1.0;
+        for (int i = 0; i < groupCount; i++) {
+            GroupInfo<T> group = gs[i];
+            double healthyRate = group.groupWeightInfo.healthyRate;
             if (factor == Double.MAX_VALUE && healthyRate > 0) {
                 return i;
             }
@@ -410,14 +410,14 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
             if (finalHealthyRate >= 1.0) {
                 return i;
             } else {
-                if (sectionRandom < 0) {
-                    sectionRandom = random.nextDouble();
+                if (groupRandom < 0) {
+                    groupRandom = random.nextDouble();
                 }
-                if (sectionRandom < finalHealthyRate) {
+                if (groupRandom < finalHealthyRate) {
                     return i;
                 } else {
                     // regenerate a random value between 0 and 1 for next use
-                    sectionRandom = (sectionRandom - finalHealthyRate) / (1.0 - finalHealthyRate);
+                    groupRandom = (groupRandom - finalHealthyRate) / (1.0 - finalHealthyRate);
                 }
             }
         }
@@ -433,8 +433,8 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         return resourcesMap;
     }
 
-    PrioritySectionInfo<T>[] getPrioritySections() {
-        return prioritySections;
+    GroupInfo<T>[] getGroups() {
+        return groups;
     }
 
     PriorityFailoverCheckTask<T> getCheckTask() {

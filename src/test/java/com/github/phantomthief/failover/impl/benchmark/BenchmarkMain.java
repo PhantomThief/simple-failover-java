@@ -12,10 +12,10 @@ import org.openjdk.jmh.runner.options.OptionsBuilder;
 public class BenchmarkMain {
     public static void main(String[] args) throws RunnerException {
         Options options = new OptionsBuilder()
-                .include(Section1PriorityFailover.class.getSimpleName())
-                .include(Section1WeightFailover.class.getSimpleName())
-                .include(Section2PriorityFailover.class.getSimpleName())
-                .include(Section2PartitionFailover.class.getSimpleName())
+                .include(Group1PriorityFailover.class.getSimpleName())
+                .include(Group1WeightFailover.class.getSimpleName())
+                .include(Group2PriorityFailover.class.getSimpleName())
+                .include(Group2PartitionFailover.class.getSimpleName())
                 .output(System.getProperty("user.home") + "/benchmark.txt")
                 .build();
         new Runner(options).run();

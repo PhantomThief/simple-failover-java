@@ -16,7 +16,7 @@ import org.openjdk.jmh.runner.RunnerException;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-import com.github.phantomthief.failover.impl.WeightFailover;
+import com.github.phantomthief.failover.impl.PartitionFailover;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
@@ -30,14 +30,17 @@ import com.google.common.collect.ImmutableMap.Builder;
 @Warmup(iterations = 1, time = 1)
 @Measurement(iterations = 2, time = 2)
 @State(Scope.Benchmark)
-public class Section1WeightFailover {
+public class Group2PartitionFailover {
 
-    @Param({"5", "20", "100", "200", "1000"})
+    @Param({"1000"})
     private int totalSize;
+
+    @Param({"5", "20"})
+    private int coreSize;
 
     private static final int FAIL_RATE = 999;
 
-    private WeightFailover<String> weightFailover;
+    private PartitionFailover<String> partitionFailover;
 
     private long count;
 
@@ -47,8 +50,9 @@ public class Section1WeightFailover {
         for (int i = 0; i < totalSize; ++i) {
             builder.put("key" + i, 100);
         }
-        weightFailover = WeightFailover.<String> newGenericBuilder()
+        partitionFailover = PartitionFailover.<String> newBuilder()
                 .checker(it -> true, 1)
+                .corePartitionSize(coreSize)
                 .failReduceRate(0.01)
                 .successIncreaseRate(1.0)
                 .build(builder.build());
@@ -57,19 +61,20 @@ public class Section1WeightFailover {
     @Benchmark
     public void getOneSuccess() {
         for (int i = 0; i < 1000; i++) {
-            String one = weightFailover.getOneAvailable();
-            weightFailover.success(one);
+            String one = partitionFailover.getOneAvailable();
+            partitionFailover.success(one);
         }
     }
+
 
     @Benchmark
     public void getOneFail() {
         for (int i = 0; i < 1000; i++) {
-            String one = weightFailover.getOneAvailable();
+            String one = partitionFailover.getOneAvailable();
             if (count++ % FAIL_RATE == 0) {
-                weightFailover.fail(one);
+                partitionFailover.fail(one);
             } else {
-                weightFailover.success(one);
+                partitionFailover.success(one);
             }
         }
     }
@@ -78,16 +83,17 @@ public class Section1WeightFailover {
         boolean useJmh = true;
         if (useJmh) {
             Options options = new OptionsBuilder()
-                    .include(Section1WeightFailover.class.getSimpleName())
-                    .output(System.getProperty("user.home") + "/" + Section1WeightFailover.class.getSimpleName()
+                    .include(Group2PartitionFailover.class.getSimpleName())
+                    .output(System.getProperty("user.home") + "/" + Group2PartitionFailover.class.getSimpleName()
                             + ".txt")
                     .build();
             new Runner(options).run();
         } else {
-            Section1WeightFailover obj = new Section1WeightFailover();
-            obj.totalSize = 5;
+            Group2PartitionFailover obj = new Group2PartitionFailover();
+            obj.totalSize = 1000;
+            obj.coreSize = 5;
             obj.init();
-            int loopCount = 1_0000_0000;
+            int loopCount = 5000_0000;
             for (int i = 0; i < 100000; i++) {
                 obj.getOneSuccess();
             }

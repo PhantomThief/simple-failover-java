@@ -21,21 +21,62 @@ import com.github.phantomthief.failover.util.SharedCheckExecutorHolder;
  */
 public class PriorityFailoverBuilder<T> {
 
+    private static final double DEFAULT_MAX_WEIGHT = 100.0;
+    private static final double DEFAULT_MIN_WEIGHT = 0.0;
+    private static final int DEFAULT_PRIORITY = 0;
+
     private PriorityFailoverConfig<T> config = new PriorityFailoverConfig<>();
+    private int[] coreGroupSizes;
 
     PriorityFailoverBuilder() {
     }
 
     public PriorityFailover<T> build() {
-        return new PriorityFailover<>(config);
+        PriorityFailoverConfig<T> configCopy = config.clone();
+        int[] coreGroupSizesCopy = coreGroupSizes == null ? null : coreGroupSizes.clone();
+        buildGroup(configCopy, coreGroupSizesCopy);
+        return new PriorityFailover<>(configCopy);
+    }
+
+    public PriorityFailoverManager<T> buildManager() {
+        PriorityFailoverConfig<T> configCopy = config.clone();
+        int[] coreGroupSizesCopy = coreGroupSizes == null ? null : coreGroupSizes.clone();
+        PriorityGroupManager<T> groupManager = buildGroup(configCopy, coreGroupSizesCopy);
+        PriorityFailover<T> priorityFailover = new PriorityFailover<>(configCopy);
+        return new PriorityFailoverManager<>(priorityFailover, groupManager);
+    }
+
+    private static <T> PriorityGroupManager<T> buildGroup(PriorityFailoverConfig<T> config, int[] coreGroupSizes) {
+        if (coreGroupSizes != null) {
+            Map<T, ResConfig> resources = config.getResources();
+            PriorityGroupManager<T> groupManager = new PriorityGroupManager<>(
+                    resources.keySet(), coreGroupSizes);
+            Map<T, Integer> priorityMap = groupManager.getPriorityMap();
+            priorityMap.forEach((res, pri) -> {
+                ResConfig old = resources.get(res);
+                ResConfig newConfig = new ResConfig(old.getMaxWeight(), old.getMinWeight(), pri, old.getInitWeight());
+                resources.put(res, newConfig);
+            });
+            return groupManager;
+        } else {
+            return null;
+        }
+    }
+
+    public PriorityFailoverBuilder<T> addResource(T res) {
+        return addResource(res, DEFAULT_MAX_WEIGHT);
     }
 
     public PriorityFailoverBuilder<T> addResource(T res, double maxWeight) {
-        return addResource(res, maxWeight, 0);
+        return addResource(res, maxWeight, DEFAULT_MIN_WEIGHT);
     }
 
-    public PriorityFailoverBuilder<T> addResource(T res, double maxWeight, int priority) {
-        return addResource(res, maxWeight, 0, priority, maxWeight);
+    public PriorityFailoverBuilder<T> addResource(T res, double maxWeight, double minWeight) {
+        return addResource(res, maxWeight, minWeight, DEFAULT_PRIORITY);
+    }
+
+    public PriorityFailoverBuilder<T> addResource(T res, double maxWeight, double minWeight, int priority) {
+        return addResource(res, maxWeight, minWeight, priority, maxWeight);
     }
 
     public PriorityFailoverBuilder<T> addResource(T res, double maxWeight, double minWeight,
@@ -48,7 +89,7 @@ public class PriorityFailoverBuilder<T> {
     }
 
     public PriorityFailoverBuilder<T> addResources(@Nonnull Collection<? extends T> resources) {
-        addResources(resources, 100.0);
+        addResources(resources, DEFAULT_MAX_WEIGHT);
         return this;
     }
 
@@ -72,9 +113,11 @@ public class PriorityFailoverBuilder<T> {
             throw new IllegalArgumentException("minWeight less than zero:" + resConfig.getMinWeight());
         }
         if (resConfig.getMaxWeight() < resConfig.getMinWeight()) {
-            throw new IllegalArgumentException("maxWeight < minWeight:" + resConfig.getMaxWeight() + "," + resConfig.getMinWeight());
+            throw new IllegalArgumentException(
+                    "maxWeight < minWeight:" + resConfig.getMaxWeight() + "," + resConfig.getMinWeight());
         }
-        if (resConfig.getInitWeight() < resConfig.getMinWeight() && resConfig.getInitWeight() > resConfig.getMaxWeight()) {
+        if (resConfig.getInitWeight() < resConfig.getMinWeight() && resConfig.getInitWeight() > resConfig
+                .getMaxWeight()) {
             throw new IllegalArgumentException("illegal initWeight:" + resConfig.getInitWeight());
         }
     }
@@ -101,6 +144,16 @@ public class PriorityFailoverBuilder<T> {
             throw new IllegalArgumentException("priorityFactor less than zero:" + priorityFactor);
         }
         config.setPriorityFactor(priorityFactor);
+        return this;
+    }
+
+    @SuppressWarnings("checkstyle:HiddenField")
+    public PriorityFailoverBuilder<T> enableAutoPriority(int... coreGroupSizes) {
+        Objects.requireNonNull(coreGroupSizes);
+        if (coreGroupSizes.length == 0) {
+            throw new IllegalArgumentException("coreGroupSizes is required");
+        }
+        this.coreGroupSizes = coreGroupSizes;
         return this;
     }
 
@@ -132,17 +185,42 @@ public class PriorityFailoverBuilder<T> {
         return this;
     }
 
-    static class ResConfig {
+    public static final class ResConfig implements Cloneable {
         private final int priority;
         private final double maxWeight;
         private final double minWeight;
         private final double initWeight;
+
+        public ResConfig() {
+            this(DEFAULT_MAX_WEIGHT);
+        }
+
+        public ResConfig(double maxWeight) {
+            this(maxWeight, DEFAULT_MIN_WEIGHT);
+        }
+
+        public ResConfig(double maxWeight, double minWeight) {
+            this(maxWeight, minWeight, DEFAULT_PRIORITY);
+        }
+
+        public ResConfig(double maxWeight, double minWeight, int priority) {
+            this(maxWeight, minWeight, priority, maxWeight);
+        }
 
         public ResConfig(double maxWeight, double minWeight, int priority, double initWeight) {
             this.maxWeight = maxWeight;
             this.minWeight = minWeight;
             this.priority = priority;
             this.initWeight = initWeight;
+        }
+
+        @Override
+        public ResConfig clone() {
+            try {
+                return (ResConfig) super.clone();
+            } catch (CloneNotSupportedException e) {
+                throw new RuntimeException(e);
+            }
         }
 
         public int getPriority() {
@@ -163,7 +241,7 @@ public class PriorityFailoverBuilder<T> {
     }
 
 
-    static class PriorityFailoverConfig<T> {
+    static class PriorityFailoverConfig<T> implements Cloneable {
         private Map<T, ResConfig> resources = new HashMap<>();
         private String name;
 
@@ -177,6 +255,19 @@ public class PriorityFailoverBuilder<T> {
         @Nullable
         private Function<T, Boolean> checker;
         private boolean startCheckTaskImmediately;
+
+        @Override
+        @SuppressWarnings("unchecked")
+        protected PriorityFailoverConfig<T> clone() {
+            try {
+                PriorityFailoverConfig<T> newOne = (PriorityFailoverConfig<T>) super.clone();
+                newOne.resources = new HashMap<>(resources);
+                return newOne;
+            } catch (CloneNotSupportedException e) {
+                // assert false
+                throw new RuntimeException(e);
+            }
+        }
 
         public Map<T, ResConfig> getResources() {
             return resources;

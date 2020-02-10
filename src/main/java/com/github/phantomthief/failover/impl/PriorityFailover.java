@@ -440,4 +440,8 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
     PriorityFailoverCheckTask<T> getCheckTask() {
         return checkTask;
     }
+
+    PriorityFailoverConfig<T> getConfig() {
+        return config;
+    }
 }

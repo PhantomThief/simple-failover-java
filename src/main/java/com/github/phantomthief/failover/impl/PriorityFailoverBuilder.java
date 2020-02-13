@@ -8,7 +8,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.function.Function;
+import java.util.function.Predicate;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -47,7 +47,7 @@ public class PriorityFailoverBuilder<T> {
     }
 
     private static <T> PriorityGroupManager<T> buildGroup(PriorityFailoverConfig<T> config, int[] coreGroupSizes) {
-        if (coreGroupSizes != null) {
+        if (coreGroupSizes != null && coreGroupSizes.length > 0) {
             Map<T, ResConfig> resources = config.getResources();
             PriorityGroupManager<T> groupManager = new PriorityGroupManager<>(
                     resources.keySet(), coreGroupSizes);
@@ -149,10 +149,6 @@ public class PriorityFailoverBuilder<T> {
 
     @SuppressWarnings("checkstyle:HiddenField")
     public PriorityFailoverBuilder<T> enableAutoPriority(int... coreGroupSizes) {
-        Objects.requireNonNull(coreGroupSizes);
-        if (coreGroupSizes.length == 0) {
-            throw new IllegalArgumentException("coreGroupSizes is required");
-        }
         this.coreGroupSizes = coreGroupSizes;
         return this;
     }
@@ -169,7 +165,7 @@ public class PriorityFailoverBuilder<T> {
         return this;
     }
 
-    public PriorityFailoverBuilder<T> checker(Function<T, Boolean> checker) {
+    public PriorityFailoverBuilder<T> checker(Predicate<T> checker) {
         requireNonNull(checker);
         config.setChecker(checker);
         return this;
@@ -253,7 +249,7 @@ public class PriorityFailoverBuilder<T> {
         private Duration checkDuration = Duration.ofSeconds(1);
         private ScheduledExecutorService checkExecutor = SharedCheckExecutorHolder.getInstance();
         @Nullable
-        private Function<T, Boolean> checker;
+        private Predicate<T> checker;
         private boolean startCheckTaskImmediately;
 
         @Override
@@ -331,11 +327,11 @@ public class PriorityFailoverBuilder<T> {
         }
 
         @Nullable
-        public Function<T, Boolean> getChecker() {
+        public Predicate<T> getChecker() {
             return checker;
         }
 
-        public void setChecker(@Nullable Function<T, Boolean> checker) {
+        public void setChecker(@Nullable Predicate<T> checker) {
             this.checker = checker;
         }
 

@@ -8,12 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import com.github.phantomthief.failover.impl.PriorityFailover.ResStatus;
 
 /**
  * @author huangli
@@ -23,6 +26,12 @@ class PriorityFailoverTest {
     private Object o0 = "o0";
     private Object o1 = "o1";
     private Object o2 = "o2";
+
+    @Test
+    public void testEmpty() {
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder().build();
+        assertNull(failover.getOneAvailable());
+    }
 
     @Test
     public void testSimple() {
@@ -87,6 +96,23 @@ class PriorityFailoverTest {
         assertEquals(3, set.size());
         assertNull(failover.getOneAvailable());
         failover.close();
+    }
+
+    @Test
+    public void testGetResourceStatus(){
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder()
+                .addResource(o0, 100, 0, 0, 100)
+                .addResource(o1, 100, 0, 1, 100)
+                .addResource(o2, 100, 0, 2, 100)
+                .build();
+        Object getO2 = failover.getOneAvailableExclude(Arrays.asList(o0, o1));
+        failover.down(getO2);
+        ResStatus s = failover.getResourceStatus(getO2);
+        assertEquals(100, s.getMaxWeight());
+        assertEquals(0, s.getMinWeight());
+        assertEquals(2, s.getPriority());
+        assertEquals(0, s.getCurrentWeight());
+        assertEquals(0, s.getConcurrency());
     }
 
     @Test
@@ -233,16 +259,16 @@ class PriorityFailoverTest {
         WeightListener<Object> listener = new WeightListener<Object>() {
             @Override
             public void onSuccess(double maxWeight, double minWeight, int priority,
-                    double currentNewWeight, Object resource) {
+                    double currentOldWeight, double currentNewWeight, Object resource) {
                 list.add("success " + maxWeight + " " + minWeight + " " + priority
-                        + " " + currentNewWeight + " " + resource);
+                        + " " + currentOldWeight + " " + currentNewWeight + " " + resource);
             }
 
             @Override
             public void onFail(double maxWeight, double minWeight, int priority,
-                    double currentNewWeight, Object resource) {
+                    double currentOldWeight, double currentNewWeight, Object resource) {
                 list.add("fail " + maxWeight + " " + minWeight + " " + priority
-                        + " " + currentNewWeight + " " + resource);
+                        + " " + currentOldWeight + " " + currentNewWeight + " " + resource);
             }
         };
         PriorityFailover<Object> failover = PriorityFailover.newBuilder()
@@ -258,23 +284,23 @@ class PriorityFailoverTest {
 
         assertEquals(o0, failover.getOneAvailable());
         failover.fail(o0);
-        assertEquals("fail 100.0 0.0 0 50.0 o0", list.get(0));
+        assertEquals("fail 100.0 0.0 0 100.0 50.0 o0", list.get(0));
 
         assertEquals(o0, failover.getOneAvailable());
         failover.success(o0);
-        assertEquals("success 100.0 0.0 0 51.0 o0", list.get(1));
+        assertEquals("success 100.0 0.0 0 50.0 51.0 o0", list.get(1));
 
         assertEquals(o0, failover.getOneAvailable());
         failover.fail(o0);
-        assertEquals("fail 100.0 0.0 0 1.0 o0", list.get(2));
+        assertEquals("fail 100.0 0.0 0 51.0 1.0 o0", list.get(2));
 
         assertEquals(o0, failover.getOneAvailable());
         failover.fail(o0);
-        assertEquals("fail 100.0 0.0 0 0.0 o0", list.get(3));
+        assertEquals("fail 100.0 0.0 0 1.0 0.0 o0", list.get(3));
 
         assertEquals(o1, failover.getOneAvailable());
         failover.down(o1);
-        assertEquals("fail 100.0 0.0 1 0.0 o1", list.get(4));
+        assertEquals("fail 100.0 0.0 1 100.0 0.0 o1", list.get(4));
 
         failover.close();
     }

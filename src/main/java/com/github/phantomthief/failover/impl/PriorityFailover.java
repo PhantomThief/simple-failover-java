@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.TreeMap;
@@ -128,6 +129,34 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         }
     }
 
+    public static class ResStatus {
+        private double maxWeight;
+        private double minWeight;
+        private int priority;
+        private double currentWeight;
+        private int concurrency;
+
+        public double getMaxWeight() {
+            return maxWeight;
+        }
+
+        public double getMinWeight() {
+            return minWeight;
+        }
+
+        public int getPriority() {
+            return priority;
+        }
+
+        public double getCurrentWeight() {
+            return currentWeight;
+        }
+
+        public int getConcurrency() {
+            return concurrency;
+        }
+    }
+
     @SuppressWarnings("unchecked")
     PriorityFailover(PriorityFailoverConfig<T> config) {
         Objects.requireNonNull(config.getResources());
@@ -241,9 +270,9 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         WeightListener<T> listener = config.getWeightListener();
         if (listener != null) {
             if (success) {
-                listener.onSuccess(maxWeight, minWeight, priority, newWeight, res);
+                listener.onSuccess(maxWeight, minWeight, priority, currentWeight, newWeight, res);
             } else {
-                listener.onFail(maxWeight, minWeight, priority, newWeight, res);
+                listener.onFail(maxWeight, minWeight, priority, currentWeight, newWeight, res);
             }
         }
     }
@@ -276,12 +305,13 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         if (resInfo.concurrency != null) {
             resInfo.concurrency.decr();
         }
+        double oldWeight = resInfo.currentWeight;
         resInfo.currentWeight = resInfo.minWeight;
         updateGroupHealthy(resInfo.priority, groups);
         WeightListener<T> listener = config.getWeightListener();
         if (listener != null) {
             listener.onFail(resInfo.maxWeight, resInfo.minWeight,
-                    resInfo.priority, resInfo.currentWeight, resInfo.resource);
+                    resInfo.priority, oldWeight, resInfo.currentWeight, resInfo.resource);
         }
         checkTask.ensureStart();
     }
@@ -427,6 +457,27 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
     @Override
     public void close() {
         checkTask.close();
+    }
+
+    public ResStatus getResourceStatus(T resource) {
+        ResInfo<T> resInfo = resourcesMap.get(resource);
+        if (resInfo == null) {
+            return null;
+        } else {
+            ResStatus status = new ResStatus();
+            status.maxWeight = resInfo.maxWeight;
+            status.minWeight = resInfo.minWeight;
+            status.priority = resInfo.priority;
+            status.currentWeight = resInfo.currentWeight;
+            if (resInfo.concurrency != null) {
+                status.concurrency = resInfo.concurrency.get();
+            }
+            return status;
+        }
+    }
+
+    public List<T> getAll() {
+        return new ArrayList<>(resourcesMap.keySet());
     }
 
     HashMap<T, ResInfo<T>> getResourcesMap() {

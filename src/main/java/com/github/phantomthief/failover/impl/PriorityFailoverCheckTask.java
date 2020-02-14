@@ -68,7 +68,7 @@ class PriorityFailoverCheckTask<T> implements Runnable {
                         r.minWeight, r.priority, r.currentWeight, r.resource)) {
                     boolean ok;
                     try {
-                        ok = config.getChecker().apply(r.resource);
+                        ok = config.getChecker().test(r.resource);
                     } catch (Throwable e) {
                         ok = false;
                     }

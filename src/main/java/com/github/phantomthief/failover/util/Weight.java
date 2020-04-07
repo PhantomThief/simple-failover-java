@@ -15,7 +15,8 @@ import com.google.common.collect.RangeMap;
 
 /**
  * 带权重的树
- * 
+ * 如果只使用 {@link #get()}，可以考虑使用 {@link AliasMethod}，性能更好
+ *
  * @author w.vela
  * @param <T>
  */

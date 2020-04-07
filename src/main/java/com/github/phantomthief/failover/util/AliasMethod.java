@@ -53,8 +53,6 @@ public class AliasMethod<T> {
 
         double average = 1.0 / size;
 
-        probabilities = new ArrayList<>(probabilities);
-
         Deque<Integer> small = new ArrayDeque<>();
         Deque<Integer> large = new ArrayDeque<>();
 

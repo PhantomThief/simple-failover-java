@@ -1,0 +1,98 @@
+package com.github.phantomthief.failover.util;
+
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkNotNull;
+
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.ThreadLocalRandom;
+
+import javax.annotation.Nonnull;
+
+/**
+ * http://www.keithschwarz.com/darts-dice-coins/
+ *
+ * @author w.vela
+ * Created on 2020-04-07.
+ */
+public class AliasMethod<T> {
+
+    private final Object[] values;
+    private final int[] alias;
+    private final double[] probability;
+
+    public AliasMethod(@Nonnull Map<T, Integer> weightMap) {
+        checkNotNull(weightMap);
+        checkArgument(weightMap.size() > 0);
+        List<Double> probabilities = new ArrayList<>(weightMap.size());
+        List<T> valueList = new ArrayList<>(weightMap.size());
+        long sum = 0;
+        for (Entry<T, Integer> entry : weightMap.entrySet()) {
+            Integer weight = entry.getValue();
+            if (weight > 0) {
+                sum += weight;
+                valueList.add(entry.getKey());
+            }
+        }
+        for (Entry<T, Integer> entry : weightMap.entrySet()) {
+            Integer weight = entry.getValue();
+            if (weight > 0) {
+                probabilities.add((double) weight / sum);
+            }
+        }
+        checkArgument(sum > 0);
+        values = valueList.toArray(new Object[0]);
+
+        int size = probabilities.size();
+        probability = new double[size];
+        alias = new int[size];
+
+        double average = 1.0 / size;
+
+        Deque<Integer> small = new ArrayDeque<>();
+        Deque<Integer> large = new ArrayDeque<>();
+
+        for (int i = 0; i < size; ++i) {
+            if (probabilities.get(i) >= average) {
+                large.add(i);
+            } else {
+                small.add(i);
+            }
+        }
+
+        while (!small.isEmpty() && !large.isEmpty()) {
+            int less = small.removeLast();
+            int more = large.removeLast();
+
+            probability[less] = probabilities.get(less) * size;
+            alias[less] = more;
+
+            probabilities.set(more, probabilities.get(more) + probabilities.get(less) - average);
+
+            if (probabilities.get(more) >= 1.0 / size) {
+                large.add(more);
+            } else {
+                small.add(more);
+            }
+        }
+
+        while (!small.isEmpty()) {
+            probability[small.removeLast()] = 1.0;
+        }
+        while (!large.isEmpty()) {
+            probability[large.removeLast()] = 1.0;
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    public T get() {
+        int column = ThreadLocalRandom.current().nextInt(probability.length);
+        boolean coinToss = ThreadLocalRandom.current().nextDouble() < probability[column];
+        int index = coinToss ? column : alias[column];
+        return (T) values[index];
+    }
+}

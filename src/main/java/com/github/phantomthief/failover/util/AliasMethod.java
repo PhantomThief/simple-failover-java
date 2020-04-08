@@ -1,7 +1,6 @@
 package com.github.phantomthief.failover.util;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -25,26 +24,30 @@ public class AliasMethod<T> {
     private final int[] alias;
     private final double[] probability;
 
-    public AliasMethod(@Nonnull Map<T, Integer> weightMap) {
-        checkNotNull(weightMap);
-        checkArgument(weightMap.size() > 0);
+    public AliasMethod(@Nonnull Map<T, ? extends Number> weightMap) {
+        requireNonNull(weightMap);
+        if (weightMap.isEmpty()) {
+            throw new IllegalArgumentException("weightMap is empty");
+        }
         List<Double> probabilities = new ArrayList<>(weightMap.size());
         List<T> valueList = new ArrayList<>(weightMap.size());
-        long sum = 0;
-        for (Entry<T, Integer> entry : weightMap.entrySet()) {
-            Integer weight = entry.getValue();
+        double sum = 0;
+        for (Entry<T, ? extends Number> entry : weightMap.entrySet()) {
+            double weight = entry.getValue().doubleValue();
             if (weight > 0) {
                 sum += weight;
                 valueList.add(entry.getKey());
             }
         }
-        for (Entry<T, Integer> entry : weightMap.entrySet()) {
-            Integer weight = entry.getValue();
+        for (Entry<T, ? extends Number> entry : weightMap.entrySet()) {
+            double weight = entry.getValue().doubleValue();
             if (weight > 0) {
-                probabilities.add((double) weight / sum);
+                probabilities.add(weight / sum);
             }
         }
-        checkArgument(sum > 0);
+        if (sum <= 0) {
+            throw new IllegalArgumentException("invalid weight map:" + weightMap);
+        }
         values = valueList.toArray(new Object[0]);
 
         int size = probabilities.size();
@@ -73,7 +76,7 @@ public class AliasMethod<T> {
 
             probabilities.set(more, probabilities.get(more) + probabilities.get(less) - average);
 
-            if (probabilities.get(more) >= 1.0 / size) {
+            if (probabilities.get(more) >= average) {
                 large.add(more);
             } else {
                 small.add(more);

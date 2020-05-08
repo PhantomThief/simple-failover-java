@@ -22,6 +22,12 @@ public class SimpleWeightFunction<T> extends AbstractWeightFunction<T> {
 
     public SimpleWeightFunction(double failDecreaseRate, double successIncreaseRate, int recoverThreshold) {
         super(recoverThreshold);
+        if (failDecreaseRate < 0 || failDecreaseRate > 1) {
+            throw new IllegalArgumentException("bad failDecreaseRate:" + failDecreaseRate);
+        }
+        if (successIncreaseRate < 0 || successIncreaseRate > 1) {
+            throw new IllegalArgumentException("bad successIncreaseRate:" + successIncreaseRate);
+        }
         this.failDecreaseRate = failDecreaseRate;
         this.successIncreaseRate = successIncreaseRate;
     }

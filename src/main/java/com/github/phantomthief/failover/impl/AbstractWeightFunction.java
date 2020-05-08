@@ -19,6 +19,9 @@ public abstract class AbstractWeightFunction<T> implements WeightFunction<T> {
     }
 
     public AbstractWeightFunction(int recoverThreshold) {
+        if (recoverThreshold < 1) {
+            throw new IllegalArgumentException("bad recoverThreshold:" + recoverThreshold);
+        }
         this.recoverThreshold = recoverThreshold;
         if (recoverThreshold > 1) {
             recoverCountMap = new ConcurrentHashMap<>();

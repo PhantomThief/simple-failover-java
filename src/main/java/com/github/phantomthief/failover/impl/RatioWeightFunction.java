@@ -29,6 +29,16 @@ public class RatioWeightFunction<T> extends AbstractWeightFunction<T> {
     public RatioWeightFunction(double failDecreaseRateOfCurrentWeight, double successIncreaseRateOfMaxWeight,
             int recoverThreshold, double downThreshold) {
         super(recoverThreshold);
+        if (failDecreaseRateOfCurrentWeight < 0 || failDecreaseRateOfCurrentWeight > 1) {
+            throw new IllegalArgumentException(
+                    "bad failDecreaseRateOfCurrentWeight:" + failDecreaseRateOfCurrentWeight);
+        }
+        if (successIncreaseRateOfMaxWeight < 0 || successIncreaseRateOfMaxWeight > 1) {
+            throw new IllegalArgumentException("bad successIncreaseRateOfMaxWeight:" + successIncreaseRateOfMaxWeight);
+        }
+        if (downThreshold < 0) {
+            throw new IllegalArgumentException("bad downThreshold:" + downThreshold);
+        }
         this.failDecreaseRateOfCurrentWeight = failDecreaseRateOfCurrentWeight;
         this.successIncreaseRateOfMaxWeight = successIncreaseRateOfMaxWeight;
         this.downThreshold = downThreshold;

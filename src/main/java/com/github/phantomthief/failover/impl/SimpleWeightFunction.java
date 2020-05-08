@@ -4,31 +4,42 @@ package com.github.phantomthief.failover.impl;
  * @author huangli
  * Created on 2020-01-20
  */
-public class SimpleWeightFunction<T> implements WeightFunction<T> {
+public class SimpleWeightFunction<T> extends AbstractWeightFunction<T> {
 
-    private double failDecreaseRate = 0.05;
-    private double successIncreaseRate = 0.01;
+    private static final double DEFAULT_FAIL_DECREASE_RATE = 0.05;
+    private static final double DEFAULT_SUCCESS_INCREASE_RATE = 0.01;
+
+    private final double failDecreaseRate;
+    private final double successIncreaseRate;
 
     public SimpleWeightFunction() {
+        this(DEFAULT_FAIL_DECREASE_RATE, DEFAULT_SUCCESS_INCREASE_RATE);
     }
 
     public SimpleWeightFunction(double failDecreaseRate, double successIncreaseRate) {
+        this(failDecreaseRate, successIncreaseRate, DEFAULT_RECOVER_THRESHOLD);
+    }
+
+    public SimpleWeightFunction(double failDecreaseRate, double successIncreaseRate, int recoverThreshold) {
+        super(recoverThreshold);
+        if (failDecreaseRate < 0 || failDecreaseRate > 1) {
+            throw new IllegalArgumentException("bad failDecreaseRate:" + failDecreaseRate);
+        }
+        if (successIncreaseRate < 0 || successIncreaseRate > 1) {
+            throw new IllegalArgumentException("bad successIncreaseRate:" + successIncreaseRate);
+        }
         this.failDecreaseRate = failDecreaseRate;
         this.successIncreaseRate = successIncreaseRate;
     }
 
     @Override
-    public double success(double maxWeight, double minWeight, int priority, double currentOldWeight, T resource) {
+    public double computeSuccess(double maxWeight, double minWeight, int priority, double currentOldWeight, T resource) {
         return currentOldWeight + maxWeight * successIncreaseRate;
     }
 
     @Override
-    public double fail(double maxWeight, double minWeight, int priority, double currentOldWeight, T resource) {
+    public double computeFail(double maxWeight, double minWeight, int priority, double currentOldWeight, T resource) {
         return currentOldWeight - maxWeight * failDecreaseRate;
     }
 
-    @Override
-    public boolean needCheck(double maxWeight, double minWeight, int priority, double currentWeight, T resource) {
-        return currentWeight <= minWeight;
-    }
 }

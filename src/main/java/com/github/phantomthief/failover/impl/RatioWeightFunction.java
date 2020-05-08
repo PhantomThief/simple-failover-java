@@ -9,7 +9,7 @@ public class RatioWeightFunction<T> extends AbstractWeightFunction<T> {
     private static final double DEFAULT_FAIL_DECREASE_RATE = 0.5;
     private static final double DEFAULT_SUCCESS_INCREASE_RATE = 0.01;
 
-    private final double failDecreaseRateOfCurrentWeight;
+    private final double failKeepRateOfCurrentWeight;
     private final double successIncreaseRateOfMaxWeight;
     private final double downThreshold;
 
@@ -17,21 +17,21 @@ public class RatioWeightFunction<T> extends AbstractWeightFunction<T> {
         this(DEFAULT_FAIL_DECREASE_RATE, DEFAULT_SUCCESS_INCREASE_RATE);
     }
 
-    public RatioWeightFunction(double failDecreaseRateOfCurrentWeight, double successIncreaseRateOfMaxWeight) {
-        this(failDecreaseRateOfCurrentWeight, successIncreaseRateOfMaxWeight, DEFAULT_RECOVER_THRESHOLD);
+    public RatioWeightFunction(double failKeepRateOfCurrentWeight, double successIncreaseRateOfMaxWeight) {
+        this(failKeepRateOfCurrentWeight, successIncreaseRateOfMaxWeight, DEFAULT_RECOVER_THRESHOLD);
     }
 
-    public RatioWeightFunction(double failDecreaseRateOfCurrentWeight, double successIncreaseRateOfMaxWeight,
+    public RatioWeightFunction(double failKeepRateOfCurrentWeight, double successIncreaseRateOfMaxWeight,
             int recoverThreshold) {
-        this(failDecreaseRateOfCurrentWeight, successIncreaseRateOfMaxWeight, recoverThreshold, 0);
+        this(failKeepRateOfCurrentWeight, successIncreaseRateOfMaxWeight, recoverThreshold, 0);
     }
 
-    public RatioWeightFunction(double failDecreaseRateOfCurrentWeight, double successIncreaseRateOfMaxWeight,
+    public RatioWeightFunction(double failKeepRateOfCurrentWeight, double successIncreaseRateOfMaxWeight,
             int recoverThreshold, double downThreshold) {
         super(recoverThreshold);
-        if (failDecreaseRateOfCurrentWeight < 0 || failDecreaseRateOfCurrentWeight > 1) {
+        if (failKeepRateOfCurrentWeight < 0 || failKeepRateOfCurrentWeight > 1) {
             throw new IllegalArgumentException(
-                    "bad failDecreaseRateOfCurrentWeight:" + failDecreaseRateOfCurrentWeight);
+                    "bad failDecreaseRateOfCurrentWeight:" + failKeepRateOfCurrentWeight);
         }
         if (successIncreaseRateOfMaxWeight < 0 || successIncreaseRateOfMaxWeight > 1) {
             throw new IllegalArgumentException("bad successIncreaseRateOfMaxWeight:" + successIncreaseRateOfMaxWeight);
@@ -39,7 +39,7 @@ public class RatioWeightFunction<T> extends AbstractWeightFunction<T> {
         if (downThreshold < 0) {
             throw new IllegalArgumentException("bad downThreshold:" + downThreshold);
         }
-        this.failDecreaseRateOfCurrentWeight = failDecreaseRateOfCurrentWeight;
+        this.failKeepRateOfCurrentWeight = failKeepRateOfCurrentWeight;
         this.successIncreaseRateOfMaxWeight = successIncreaseRateOfMaxWeight;
         this.downThreshold = downThreshold;
     }
@@ -53,7 +53,7 @@ public class RatioWeightFunction<T> extends AbstractWeightFunction<T> {
     @Override
     protected double computeFail(double maxWeight, double minWeight, int priority, double currentOldWeight,
             T resource) {
-        double x = currentOldWeight - currentOldWeight * failDecreaseRateOfCurrentWeight;
+        double x = currentOldWeight * failKeepRateOfCurrentWeight;
         return x < downThreshold ? minWeight : x;
     }
 }

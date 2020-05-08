@@ -22,11 +22,10 @@ public class RatioWeightFunctionTest {
 
     @Test
     public void testFail2() {
-        RatioWeightFunction<String> f = new RatioWeightFunction<>(0.5, 0.01, 1, 0.2);
-        assertEquals(0.5, f.fail(1, 0, 0, 1, "R1"));
-        assertEquals(0.25, f.fail(1, 0, 0, 0.5, "R1"));
-        assertEquals(0, f.fail(1, 0, 0, 0.25, "R1"));
-        assertEquals(0, f.fail(1, 0, 0, 0, "R1"));
+        RatioWeightFunction<String> f = new RatioWeightFunction<>(0.7, 0.01, 1, 0.4);
+        assertEquals(0.7, f.fail(1, 0, 0, 1, "R1"), 0.001);
+        assertEquals(0.49, f.fail(1, 0, 0, 0.7, "R1"), 0.001);
+        assertEquals(0, f.fail(1, 0, 0, 0.49, "R1"));
     }
 
     @Test

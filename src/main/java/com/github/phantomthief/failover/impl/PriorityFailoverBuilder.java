@@ -181,6 +181,11 @@ public class PriorityFailoverBuilder<T> {
         return this;
     }
 
+    public PriorityFailoverBuilder<T> aliasMethodThreshold(int aliasMethodThreshold) {
+        config.setAliasMethodThreshold(aliasMethodThreshold);
+        return this;
+    }
+
     public static final class ResConfig implements Cloneable {
         private final int priority;
         private final double maxWeight;
@@ -251,6 +256,8 @@ public class PriorityFailoverBuilder<T> {
         @Nullable
         private Predicate<T> checker;
         private boolean startCheckTaskImmediately;
+
+        private int aliasMethodThreshold = 10;
 
         @Override
         @SuppressWarnings("unchecked")
@@ -341,6 +348,14 @@ public class PriorityFailoverBuilder<T> {
 
         public void setStartCheckTaskImmediately(boolean startCheckTaskImmediately) {
             this.startCheckTaskImmediately = startCheckTaskImmediately;
+        }
+
+        public int getAliasMethodThreshold() {
+            return aliasMethodThreshold;
+        }
+
+        public void setAliasMethodThreshold(int aliasMethodThreshold) {
+            this.aliasMethodThreshold = aliasMethodThreshold;
         }
     }
 }

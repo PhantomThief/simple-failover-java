@@ -357,6 +357,11 @@ class PriorityFailoverTest {
 
     private void testDist(PriorityFailover<Object> failover, double w0, double w1, double w2)
             throws Exception {
+        testDist(failover, w0, w1, w2, false);
+    }
+
+    private void testDist(PriorityFailover<Object> failover, double w0, double w1, double w2, boolean returnRes)
+            throws Exception {
         Thread.sleep(5);
         int c0 = 0, c1 = 0, c2 = 0;
         int totalCount = 10000;
@@ -369,10 +374,70 @@ class PriorityFailoverTest {
             } else {
                 c2++;
             }
+            if (returnRes) {
+                failover.success(o);
+            }
         }
         assertEquals(w0 / (w0 + w1 + w2), 1.0 * c0 / totalCount, 0.03);
         assertEquals(w1 / (w0 + w1 + w2), 1.0 * c1 / totalCount, 0.03);
         assertEquals(w2 / (w0 + w1 + w2), 1.0 * c2 / totalCount, 0.03);
+    }
+
+
+
+    @Test
+    public void testDistForRoundRobin() throws Exception {
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder()
+                .addResource(o0, 1.0)
+                .addResource(o1, 1.0)
+                .addResource(o2, 1.0)
+                .build();
+        testDist(failover, 1.0, 1.0, 1.0);
+        failover.close();
+    }
+
+    @Test
+    public void testDistForAliasMethod() throws Exception {
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder()
+                .addResource(o0, 1.0)
+                .addResource(o1, 0.9)
+                .addResource(o2, 0.8)
+                .build();
+        testDist(failover, 1.0, 0.9, 0.8);
+        failover.close();
+
+        failover = PriorityFailover.newBuilder()
+                .addResource(o0, 1.0)
+                .addResource(o1, 0.9)
+                .addResource(o2, 0.8)
+                .aliasMethodThreshold(2)
+                .build();
+        testDist(failover, 1.0, 0.9, 0.8);
+        failover.close();
+    }
+
+    @Test
+    public void testDistNotHealthy() throws Exception {
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder()
+                .addResource(o0, 100, 0, 0, 100)
+                .addResource(o1, 100, 0, 0, 100)
+                .addResource(o2, 100, 0, 0, 50)
+                .build();
+        testDist(failover, 100, 100, 50);
+        failover.close();
+    }
+
+    @Test
+    public void testDistWithConCtrl() throws Exception {
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder()
+                .addResource(o0, 100, 0, 0, 100)
+                .addResource(o1, 100, 0, 0, 100)
+                .addResource(o2, 100, 0, 0, 100)
+                .concurrencyControl(true)
+                .build();
+        failover.getOneAvailableExclude(Arrays.asList(o1, o2));
+        testDist(failover, 50, 100, 100, true);
+        failover.close();
     }
 
     @Test

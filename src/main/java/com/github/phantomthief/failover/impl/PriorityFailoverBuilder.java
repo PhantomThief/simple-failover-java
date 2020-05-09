@@ -247,7 +247,7 @@ public class PriorityFailoverBuilder<T> {
         private String name;
 
         private double priorityFactor = 1.4;
-        private WeightFunction<T> weightFunction = new SimpleWeightFunction<>();
+        private WeightFunction<T> weightFunction = new RatioWeightFunction<>();
         @Nullable
         private WeightListener<T> weightListener;
         private boolean concurrencyControl = false;

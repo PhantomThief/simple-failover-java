@@ -1,5 +1,8 @@
 package com.github.phantomthief.failover.impl;
 
+import static java.util.Arrays.stream;
+import static java.util.stream.Collectors.toMap;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -18,6 +21,7 @@ import javax.annotation.concurrent.ThreadSafe;
 import com.github.phantomthief.failover.SimpleFailover;
 import com.github.phantomthief.failover.impl.PriorityFailoverBuilder.PriorityFailoverConfig;
 import com.github.phantomthief.failover.impl.PriorityFailoverBuilder.ResConfig;
+import com.github.phantomthief.failover.util.AliasMethod;
 
 /**
  * @author huangli
@@ -75,16 +79,20 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
 
         final boolean maxWeightSame;
 
+        @Nullable
+        final AliasMethod<ResInfo<T>> aliasMethod;
+
         int roundRobinIndex;
 
         volatile GroupWeightInfo groupWeightInfo;
 
         GroupInfo(int priority, @Nonnull ResInfo<T>[] resources, double totalMaxWeight,
-                boolean maxWeightSame, GroupWeightInfo groupWeightInfo) {
+                boolean maxWeightSame, @Nullable AliasMethod<ResInfo<T>> aliasMethod, GroupWeightInfo groupWeightInfo) {
             this.priority = priority;
             this.resources = resources;
             this.totalMaxWeight = totalMaxWeight;
             this.maxWeightSame = maxWeightSame;
+            this.aliasMethod = aliasMethod;
             this.groupWeightInfo = groupWeightInfo;
         }
     }
@@ -92,20 +100,21 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
     @SuppressWarnings("checkstyle:VisibilityModifier")
     static class GroupWeightInfo {
         final boolean roundRobin;
+        final boolean aliasMethod;
 
         final double totalCurrentWeight;
 
-        //
         final double[] currentWeightCopy;
 
         final double healthyRate;
 
-        GroupWeightInfo(double totalCurrentWeight, double healthyRate, double[] currentWeightCopy,
-                boolean roundRobin) {
+        GroupWeightInfo(boolean maxWeightSame, double totalCurrentWeight,
+                double totalMaxWeight, double[] currentWeightCopy, @Nullable AliasMethod<?> aliasMethod) {
             this.totalCurrentWeight = totalCurrentWeight;
-            this.healthyRate = healthyRate;
+            this.healthyRate = totalCurrentWeight / totalMaxWeight;
             this.currentWeightCopy = currentWeightCopy;
-            this.roundRobin = roundRobin;
+            this.roundRobin = maxWeightSame && totalCurrentWeight == totalMaxWeight;
+            this.aliasMethod = aliasMethod != null && totalCurrentWeight == totalMaxWeight;
         }
     }
 
@@ -202,11 +211,16 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
                     maxWeightSame = false;
                 }
             }
-            GroupWeightInfo groupWeightInfo = new GroupWeightInfo(totalCurrentWeight,
-                    totalCurrentWeight / totalMaxWeight, currentWeightCopy,
-                    maxWeightSame && totalCurrentWeight == totalMaxWeight);
+            AliasMethod<ResInfo<T>> aliasMethod = null;
+            if (!maxWeightSame && resources.length > config.getAliasMethodThreshold()) {
+                aliasMethod = new AliasMethod<>(stream(resources)
+                        .collect(toMap(ri -> ri, ri -> ri.maxWeight)));
+            }
+            GroupWeightInfo groupWeightInfo = new GroupWeightInfo(maxWeightSame, totalCurrentWeight,
+                    totalMaxWeight, currentWeightCopy, aliasMethod);
+
             groups[groupIndex++] = new GroupInfo<>(priority, resources,
-                    totalMaxWeight, maxWeightSame, groupWeightInfo);
+                    totalMaxWeight, maxWeightSame, aliasMethod, groupWeightInfo);
         }
 
         checkTask = new PriorityFailoverCheckTask<>(config, this);
@@ -289,9 +303,8 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
                     sumCurrentWeight += ri.currentWeight;
                     weightCopy[i] = ri.currentWeight;
                 }
-                psi.groupWeightInfo = new GroupWeightInfo(sumCurrentWeight,
-                        sumCurrentWeight / psi.totalMaxWeight, weightCopy,
-                        psi.maxWeightSame && sumCurrentWeight == psi.totalMaxWeight);
+                psi.groupWeightInfo = new GroupWeightInfo(psi.maxWeightSame, sumCurrentWeight,
+                        psi.totalMaxWeight, weightCopy, psi.aliasMethod);
             }
         }
     }
@@ -363,6 +376,8 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
                 int roundRobinIndex = groupInfo.roundRobinIndex;
                 groupInfo.roundRobinIndex = (roundRobinIndex + 1) % resCount;
                 return resources[roundRobinIndex];
+            } else if (groupWeightInfo.aliasMethod) {
+                return groupInfo.aliasMethod.get();
             } else {
                 double totalCurrentWeight = groupWeightInfo.totalCurrentWeight;
                 if (totalCurrentWeight <= 0) {

@@ -19,7 +19,15 @@ import javax.annotation.Nullable;
 import javax.annotation.concurrent.NotThreadSafe;
 
 /**
- * Auto divide resources into several groups, the priority of first group is number 0, the second is 1 ...
+ * 自动分组管理器，自动将资源分成若干组，第一组的priority是0，第二组是1，依次类推。
+ * 同时，提供全量和增量变更管理的功能。
+ *
+ * <p>
+ * 举个例子，假设update后新的资源列表共100个，分两个组，分别有5个和95个资源。
+ * <li>每个加入的资源有均等的机会进入第一组，几率为5%，这样可以避免新增的资源（服务器）没有流量，并且新增的资源和已有的资源流量应该是对等的；
+ * <li>对于保留的资源来说，如果一个资源A之前进入了前一组，而B没有，那么A仍然优先，不会出现B进了第一组而A没有进的情况
+ * （B有可能因为旧资源删除而晋升），这样可以尽量保持主调方的粘性，有利于连接复用和被调用方的缓存等。
+ * </p>
  *
  * @author huangli
  * Created on 2020-02-03
@@ -40,8 +48,9 @@ public class PriorityGroupManager<T> {
     private volatile HashMap<T, int[]> resMap;
 
     /**
-     * @param initResources the init resources
-     * @param coreGroupSizes the size of each group, if you want N groups, coreGroupSizes.length should be N-1
+     * 构造自动分组管理器。
+     * @param initResources 初始资源列表
+     * @param coreGroupSizes 你对每组资源数量的要求，只填N-1个组，比如想分3组，第一组5个，第二组20个，剩下是第三组，那么这个参数传入[5, 10]
      */
     public PriorityGroupManager(@Nonnull Set<T> initResources, int... coreGroupSizes) {
         Objects.requireNonNull(initResources);
@@ -91,15 +100,35 @@ public class PriorityGroupManager<T> {
         return map;
     }
 
+    /**
+     * 获取资源优先级map。
+     * @return map里面的key是资源，value是优先级（0 based）
+     */
     public Map<T, Integer> getPriorityMap() {
         return resMap.entrySet().stream()
                 .collect(toMap(Entry::getKey, e -> e.getValue()[0]));
     }
 
+    /**
+     * 获取某个资源的优先级
+     * @param res 资源
+     * @return 优先级（0 based）
+     */
     public int getPriority(T res) {
         return resMap.get(res)[0];
     }
 
+    /**
+     * 全量更新，会自动计算出需要增加的、删除的、保留的资源，以前的分组数据会按几率分布保留。
+     *
+     * <p>
+     * 举个例子，假设update后新的资源列表共100个，分两个组，分别有5个和95个资源。
+     * <li>每个加入的资源有均等的机会进入第一组，几率为5%，这样可以避免新增的资源（服务器）没有流量，并且新增的资源和已有的资源流量应该是对等的；
+     * <li>对于保留的资源来说，如果一个资源A之前进入了前一组，而B没有，那么A仍然优先，不会出现B进了第一组而A没有进的情况
+     * （B有可能因为旧资源删除而晋升），这样可以尽量保持主调方的粘性，有利于连接复用和被调用方的缓存等。
+     * </p>
+     * @param resources 新的资源列表
+     */
     public void updateAll(@Nonnull Set<T> resources) {
         Objects.requireNonNull(resources);
         Set<T> resNeedToAdd = resources.stream()
@@ -111,11 +140,24 @@ public class PriorityGroupManager<T> {
         update0(resNeedToAdd, resNeedToRemove);
     }
 
+    /**
+     * 增量更新，会自动计算出需要增加的、删除的、保留的资源，以前的分组数据会按几率分布保留。
+     *
+     * <p>
+     * 举个例子，假设update后新的资源列表共100个，分两个组，分别有5个和95个资源。
+     * <li>每个加入的资源有均等的机会进入第一组，几率为5%，这样可以避免新增的资源（服务器）没有流量，并且新增的资源和已有的资源流量应该是对等的；
+     * <li>对于保留的资源来说，如果一个资源A之前进入了前一组，而B没有，那么A仍然优先，不会出现B进了第一组而A没有进的情况
+     * （B有可能因为旧资源删除而晋升），这样可以尽量保持主调方的粘性，有利于连接复用和被调用方的缓存等。
+     * </p>
+     * @param resNeedToAdd 需要添加的
+     * @param resNeedToRemove 需要删除的
+     */
     public void update(@Nullable Set<T> resNeedToAdd, @Nullable Set<T> resNeedToRemove) {
         if (resNeedToAdd != null) {
             resNeedToAdd = new HashSet<>(resNeedToAdd);
             resNeedToAdd.removeAll(resMap.keySet());
             if (resNeedToRemove != null) {
+                // 以免两个set之间有重叠
                 resNeedToAdd.removeAll(resNeedToRemove);
             }
         }

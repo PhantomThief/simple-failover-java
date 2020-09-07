@@ -24,6 +24,12 @@ import com.github.phantomthief.failover.impl.PriorityFailoverBuilder.ResConfig;
 import com.github.phantomthief.failover.util.AliasMethod;
 
 /**
+ * SimpleFailover的实现，绝大部分场景下可以代替WeightFailover，性能和功能都要更强一些。
+ *
+ * <p>
+ * 请先阅读README.md，可以到<a href="https://github.com/PhantomThief/simple-failover-java">这里</a>在线阅读。
+ * </p>
+ *
  * @author huangli
  * Created on 2020-01-16
  */
@@ -138,6 +144,10 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         }
     }
 
+    /**
+     * 用来表示一个资源的内部状态。
+     * @see PriorityFailover#getResourceStatus(Object)
+     */
     public static class ResStatus {
         private double maxWeight;
         private double minWeight;
@@ -145,22 +155,42 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         private double currentWeight;
         private int concurrency;
 
+        /**
+         * 获取该资源的最大权重。
+         * @return 最大权重
+         */
         public double getMaxWeight() {
             return maxWeight;
         }
 
+        /**
+         * 获取该资源的最小权重。
+         * @return 最小权重
+         */
         public double getMinWeight() {
             return minWeight;
         }
 
+        /**
+         * 获取该资源的优先级。
+         * @return 优先级
+         */
         public int getPriority() {
             return priority;
         }
 
+        /**
+         * 获取该资源的当前权重。
+         * @return 当前权重
+         */
         public double getCurrentWeight() {
             return currentWeight;
         }
 
+        /**
+         * 获取该资源的并发度。
+         * @return 并发度
+         */
         public int getConcurrency() {
             return concurrency;
         }
@@ -469,11 +499,19 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         return 0;
     }
 
+    /**
+     * 关闭failover内部的健康检查任务。
+     */
     @Override
     public void close() {
         checkTask.close();
     }
 
+    /**
+     * 获取一个资源的内部状态。
+     * @param resource 资源
+     * @return 资源内部状态，如果根据传入的参数找不到结果，返回null
+     */
     public ResStatus getResourceStatus(T resource) {
         ResInfo<T> resInfo = resourcesMap.get(resource);
         if (resInfo == null) {
@@ -491,6 +529,10 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         }
     }
 
+    /**
+     * 获取所有的资源，返回的是一个List副本。
+     * @return 所有资源的副本
+     */
     public List<T> getAll() {
         return new ArrayList<>(resourcesMap.keySet());
     }

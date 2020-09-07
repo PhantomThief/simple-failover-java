@@ -16,6 +16,9 @@ import javax.annotation.Nonnull;
 import com.github.phantomthief.util.ThrowableFunction;
 import com.github.phantomthief.util.ThrowablePredicate;
 
+/**
+ * 这是重构过程中途的一个实现，现在建议使用{@link PriorityFailover}。
+ */
 @SuppressWarnings({"checkstyle:VisibilityModifier", "checkstyle:HiddenField"})
 public class PartitionFailoverBuilder<T> {
 

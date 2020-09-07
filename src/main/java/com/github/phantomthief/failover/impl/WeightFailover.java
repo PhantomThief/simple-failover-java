@@ -37,9 +37,15 @@ import com.github.phantomthief.util.MoreSuppliers.CloseableSupplier;
 import com.google.common.collect.ImmutableList;
 
 /**
- * 默认权重记录
- * fail时权重下降
- * success时权重恢复
+ * 基于权重的failover，失败减，成功加，这是个早期的实现，用的也非常多，
+ * 现在建议使用{@link com.github.phantomthief.failover.SimpleFailover SimpleFailover}接口
+ * 和{@link PriorityFailover}实现。
+ *
+ * 需要注意的是：1、WeightFailover的权重是整数。2、WeightFailover不区分初始权重和最大权重（即初始权重总是等于最大权重）。
+ *
+ * <p>
+ * 请先阅读README.md，可以到<a href="https://github.com/PhantomThief/simple-failover-java">这里</a>在线阅读。
+ * </p>
  *
  * @author w.vela
  */
@@ -106,10 +112,18 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
         return new WeightFailoverBuilder<>();
     }
 
+    /**
+     * 获取一个新的builder。
+     * @param <E> 要构建的资源的类型
+     * @return builder
+     */
     public static <E> GenericWeightFailoverBuilder<E> newGenericBuilder() {
         return new GenericWeightFailoverBuilder<>(newBuilder());
     }
 
+    /**
+     * 关闭failover，释放内部的健康检查任务。
+     */
     @Override
     public void close() {
         closed.set(true);

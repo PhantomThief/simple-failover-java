@@ -18,6 +18,8 @@ import javax.annotation.Nullable;
 import com.github.phantomthief.failover.Failover;
 
 /**
+ * 这是重构过程中途的一个实现，现在建议使用{@link PriorityFailover}。
+ *
  * @author huangli
  * Created on 2019-12-10
  */

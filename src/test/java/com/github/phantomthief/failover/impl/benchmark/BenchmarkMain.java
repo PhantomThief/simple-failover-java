@@ -13,9 +13,9 @@ public class BenchmarkMain {
     public static void main(String[] args) throws RunnerException {
         Options options = new OptionsBuilder()
                 .include(Group1PriorityFailover.class.getSimpleName())
-                .include(Group1WeightFailover.class.getSimpleName())
+                //.include(Group1WeightFailover.class.getSimpleName())
                 .include(Group2PriorityFailover.class.getSimpleName())
-                .include(Group2PartitionFailover.class.getSimpleName())
+                //.include(Group2PartitionFailover.class.getSimpleName())
                 .output(System.getProperty("user.home") + "/benchmark.txt")
                 .build();
         new Runner(options).run();

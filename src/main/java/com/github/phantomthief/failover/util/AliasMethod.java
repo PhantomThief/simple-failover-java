@@ -93,8 +93,9 @@ public class AliasMethod<T> {
 
     @SuppressWarnings("unchecked")
     public T get() {
-        int column = ThreadLocalRandom.current().nextInt(probability.length);
-        boolean coinToss = ThreadLocalRandom.current().nextDouble() < probability[column];
+        ThreadLocalRandom r = ThreadLocalRandom.current();
+        int column = r.nextInt(probability.length);
+        boolean coinToss = r.nextDouble() < probability[column];
         int index = coinToss ? column : alias[column];
         return (T) values[index];
     }

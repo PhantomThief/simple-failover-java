@@ -303,6 +303,18 @@ public class PriorityFailoverBuilder<T> {
     }
 
     /**
+     * 手工并发度控制，开启后getOneAvailable/getOneAvailableExclude不增加并发度，success/fail/down不减少并发度。
+     * @param manualConcurrencyControl 是否激活手动并发度控制
+     * @see PriorityFailover#incrConcurrency(Object)
+     * @see PriorityFailover#decrConcurrency(Object)
+     * @return this
+     */
+    public PriorityFailoverBuilder<T> manualConcurrencyControl(boolean manualConcurrencyControl) {
+        config.setManualConcurrencyControl(manualConcurrencyControl);
+        return this;
+    }
+
+    /**
      * 启用AliasMethod算法的资源数量阈值，AliasMethod算法是O(1)，但是如果资源总数少，是没有收益的，默认值是10。
      * @param aliasMethodThreshold 启用AliasMethod算法的资源数量阈值
      * @return this
@@ -380,6 +392,7 @@ public class PriorityFailoverBuilder<T> {
         @Nullable
         private WeightListener<T> weightListener;
         private boolean concurrencyControl = false;
+        private boolean manualConcurrencyControl = false;
         private Duration checkDuration = Duration.ofSeconds(1);
         private ScheduledExecutorService checkExecutor = SharedCheckExecutorHolder.getInstance();
         @Nullable
@@ -444,6 +457,14 @@ public class PriorityFailoverBuilder<T> {
 
         public void setConcurrencyControl(boolean concurrencyControl) {
             this.concurrencyControl = concurrencyControl;
+        }
+
+        public boolean isManualConcurrencyControl() {
+            return manualConcurrencyControl;
+        }
+
+        public void setManualConcurrencyControl(boolean manualConcurrencyControl) {
+            this.manualConcurrencyControl = manualConcurrencyControl;
         }
 
         public Duration getCheckDuration() {

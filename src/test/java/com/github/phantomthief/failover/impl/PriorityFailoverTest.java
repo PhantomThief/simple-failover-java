@@ -202,23 +202,11 @@ class PriorityFailoverTest {
                 .addResource(o0, 100, 0, 0, 100)
                 .addResource(o1, 100, 0, 0, 100)
                 .concurrencyControl(true)
-                .weightFunction(new SimpleWeightFunction<Object>() {
-                    @Override
-                    public double success(double maxWeight, double minWeight, int priority,
-                            double currentOldWeight, Object resource) {
-                        return currentOldWeight;
-                    }
-
-                    @Override
-                    public double fail(double maxWeight, double minWeight, int priority,
-                            double currentOldWeight, Object resource) {
-                        return currentOldWeight;
-                    }
-                })
                 .build();
         failover.getOneAvailableExclude(Collections.singleton(o1));
         failover.getOneAvailableExclude(Collections.singleton(o1));
         failover.getOneAvailableExclude(Collections.singleton(o1));
+        assertEquals(3, failover.getResourceStatus(o0).getConcurrency());
 
         int c0 = 0, c1 = 0;
         int totalCount = 10000;
@@ -229,13 +217,49 @@ class PriorityFailoverTest {
                 failover.success(o);
             } else {
                 c1++;
-                failover.fail(o);
+                failover.success(o);
             }
         }
         assertEquals(0.2, 1.0 * c0 / totalCount, 0.03);
         assertEquals(0.8, 1.0 * c1 / totalCount, 0.03);
 
         failover.close();
+    }
+
+    @Test
+    public void testManualConcurrencyCtrl() {
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder()
+                .addResource(o0, 100, 0, 0, 100)
+                .addResource(o1, 100, 0, 0, 100)
+                .concurrencyControl(true)
+                .manualConcurrencyControl(true)
+                .build();
+
+        Object one = failover.getOneAvailable();
+        assertEquals(0, failover.getResourceStatus(one).getConcurrency());
+        failover.incrConcurrency(one);
+        failover.incrConcurrency(one);
+        failover.incrConcurrency(one);
+        assertEquals(3, failover.getResourceStatus(one).getConcurrency());
+        failover.decrConcurrency(one);
+        assertEquals(2, failover.getResourceStatus(one).getConcurrency());
+        failover.resetConcurrency(one);
+        assertEquals(0, failover.getResourceStatus(one).getConcurrency());
+
+        one = failover.getOneAvailable();
+        assertEquals(0, failover.getResourceStatus(one).getConcurrency());
+        failover.success(one);
+        assertEquals(0, failover.getResourceStatus(one).getConcurrency());
+
+        one = failover.getOneAvailable();
+        assertEquals(0, failover.getResourceStatus(one).getConcurrency());
+        failover.fail(one);
+        assertEquals(0, failover.getResourceStatus(one).getConcurrency());
+
+        one = failover.getOneAvailable();
+        assertEquals(0, failover.getResourceStatus(one).getConcurrency());
+        failover.down(one);
+        assertEquals(0, failover.getResourceStatus(one).getConcurrency());
     }
 
     @Test

@@ -43,6 +43,8 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
     private final GroupInfo<T>[] groups;
 
     private final boolean concurrentCtrl;
+    private final boolean manualConcurrencyControl;
+    private static final int MAX_CONCURRENCY = 100000;
 
     @SuppressWarnings("checkstyle:VisibilityModifier")
     static class ResInfo<T> {
@@ -132,7 +134,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         }
 
         public void incr() {
-            atomicValue.updateAndGet(v -> Math.max(v + 1, 0));
+            atomicValue.updateAndGet(v -> Math.min(v + 1, MAX_CONCURRENCY));
         }
 
         public void decr() {
@@ -141,6 +143,10 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
 
         public int get() {
             return atomicValue.get();
+        }
+
+        public void reset() {
+            atomicValue.set(0);
         }
     }
 
@@ -203,6 +209,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         int resCount = config.getResources().size();
         this.resourcesMap = new HashMap<>(resCount * 3);
         this.concurrentCtrl = config.isConcurrencyControl();
+        this.manualConcurrencyControl = config.isManualConcurrencyControl();
         TreeMap<Integer, ArrayList<ResInfo<T>>> priorityMap = new TreeMap<>();
         for (Entry<T, ResConfig> en : config.getResources().entrySet()) {
             T res = en.getKey();
@@ -260,6 +267,55 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         return new PriorityFailoverBuilder<>();
     }
 
+
+    /**
+     * 个别情况下想要手工做并发度控制，调用此方法，并发度加1。
+     */
+    public void incrConcurrency(@Nullable T object) {
+        if (object == null) {
+            return;
+        }
+        ResInfo<T> resInfo = resourcesMap.get(object);
+        if (resInfo == null) {
+            return;
+        }
+        if (resInfo.concurrency != null) {
+            resInfo.concurrency.incr();
+        }
+    }
+
+    /**
+     * 个别情况下想要手工做并发度控制，调用此方法，并发度减1。
+     */
+    public void decrConcurrency(@Nullable T object) {
+        if (object == null) {
+            return;
+        }
+        ResInfo<T> resInfo = resourcesMap.get(object);
+        if (resInfo == null) {
+            return;
+        }
+        if (resInfo.concurrency != null) {
+            resInfo.concurrency.decr();
+        }
+    }
+
+    /**
+     * 个别情况下想要手工做并发度控制，调用此方法，并发度设置为0。
+     */
+    public void resetConcurrency(@Nullable T object) {
+        if (object == null) {
+            return;
+        }
+        ResInfo<T> resInfo = resourcesMap.get(object);
+        if (resInfo == null) {
+            return;
+        }
+        if (resInfo.concurrency != null) {
+            resInfo.concurrency.reset();
+        }
+    }
+
     @Override
     public void success(@Nonnull T object) {
         processWeight(object, true);
@@ -276,7 +332,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         if (resInfo == null) {
             return;
         }
-        if (resInfo.concurrency != null) {
+        if (resInfo.concurrency != null && !manualConcurrencyControl) {
             resInfo.concurrency.decr();
         }
         updateWeight(success, resInfo, config, groups);
@@ -345,7 +401,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         if (resInfo == null) {
             return;
         }
-        if (resInfo.concurrency != null) {
+        if (resInfo.concurrency != null && !manualConcurrencyControl) {
             resInfo.concurrency.decr();
         }
         double oldWeight = resInfo.currentWeight;
@@ -383,7 +439,7 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         for (int i = 0; i < groupCount; i++) {
             ResInfo<T> ri = findOneInRegion(threadLocalRandom, preferGroupIndex, exclusions);
             if (ri != null) {
-                if (ri.concurrency != null) {
+                if (ri.concurrency != null && !manualConcurrencyControl) {
                     ri.concurrency.incr();
                 }
                 return ri.resource;

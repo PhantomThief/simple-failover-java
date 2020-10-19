@@ -22,8 +22,8 @@ class SharedResourceTest {
 
     @Test
     void test() {
-        MockResource mock=resources.register("1", MockResource::new);
-        assertSame(mock,resources.get("1"));
+        MockResource mock = resources.register("1", MockResource::new);
+        assertSame(mock, resources.get("1"));
         assertSame(mock, resources.register("1", MockResource::new));
         resources.register("2", MockResource::new);
 
@@ -63,6 +63,15 @@ class SharedResourceTest {
                 }));
         assertSame(mock, e.getRemoved());
         assertSame(IllegalArgumentException.class, e.getCause().getClass());
+    }
+
+    @Test
+    void testRegFail() {
+        assertThrows(RuntimeException.class, () -> resources.register("5", (s) -> {
+            throw new RuntimeException();
+        }));
+        MockResource mockResource = resources.get("5");
+        assertNull(mockResource);
     }
 
     private static class MockResource {

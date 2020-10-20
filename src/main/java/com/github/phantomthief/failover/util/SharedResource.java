@@ -74,7 +74,7 @@ public class SharedResource<K, V> {
         private final K key;
         private final OnceSupplier<V> resourceSupplier;
 
-        @javax.annotation.concurrent.GuardedBy("ResourceWrapper::this")
+        @GuardedBy("ResourceWrapper::this")
         private volatile int counter = 0;
         @GuardedBy("ResourceWrapper::this")
         private volatile boolean expired = false;

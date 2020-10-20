@@ -1,5 +1,6 @@
 package com.github.phantomthief.failover.util;
 
+import static com.github.phantomthief.tuple.Tuple.tuple;
 import static com.github.phantomthief.util.MoreSuppliers.lazy;
 import static org.slf4j.LoggerFactory.getLogger;
 
@@ -16,6 +17,7 @@ import javax.annotation.concurrent.GuardedBy;
 
 import org.slf4j.Logger;
 
+import com.github.phantomthief.tuple.TwoTuple;
 import com.github.phantomthief.util.ThrowableConsumer;
 
 /**
@@ -40,46 +42,30 @@ public class SharedResource<K, V> {
      */
     private static class OnceSupplier<T> implements Supplier<T> {
 
-        private enum Status {
-            CREATED,
-            ACTIVATED,
-            BROKEN
-        }
-
-        private final Supplier<T> delegate;
-        private final AtomicReference<OnceSupplier.Status> status = new AtomicReference<>(OnceSupplier.Status.CREATED);
-        // 把 broken 的异常缓存起来，在后续的 get 时上抛
-        private volatile Throwable brokenException;
+        private final Supplier<TwoTuple<T, Throwable>> delegate;
 
         public OnceSupplier(Supplier<T> delegate) {
-            this.delegate = lazy(delegate);
-        }
-
-        private synchronized T doInit() {
-            if (status.get() == OnceSupplier.Status.ACTIVATED) {
-                return delegate.get();
-            } else if (status.get() == OnceSupplier.Status.BROKEN) {
-                throw new RuntimeException("resource broken");
-            }
-            try {
-                T resource = delegate.get();
-                status.set(OnceSupplier.Status.ACTIVATED);
-                return resource;
-            } catch (Throwable t) {
-                brokenException = t;
-                status.set(OnceSupplier.Status.BROKEN);
-                throw t;
-            }
+            this.delegate = lazy(() -> {
+                T value = null;
+                Throwable throwable = null;
+                try {
+                    value = delegate.get();
+                } catch (Throwable t) {
+                    throwable = t;
+                }
+                return tuple(value, throwable);
+            });
         }
 
         @Override
         public T get() {
-            if (status.get() == OnceSupplier.Status.ACTIVATED) {
-                return delegate.get();
-            } else if (status.get() == OnceSupplier.Status.BROKEN) {
-                throw new OnceBrokenException(brokenException);
+            TwoTuple<T, Throwable> tuple = delegate.get();
+            Throwable throwable = tuple.getSecond();
+            if (throwable != null) {
+                throw new OnceBrokenException(throwable);
+            } else {
+                return tuple.getFirst();
             }
-            return doInit();
         }
     }
 

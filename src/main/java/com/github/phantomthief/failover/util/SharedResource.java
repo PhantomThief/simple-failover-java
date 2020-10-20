@@ -48,6 +48,8 @@ public class SharedResource<K, V> {
 
         private final Supplier<T> delegate;
         private final AtomicReference<OnceSupplier.Status> status = new AtomicReference<>(OnceSupplier.Status.CREATED);
+        // 把 broken 的异常缓存起来，在后续的 get 时上抛
+        private volatile Throwable brokenException;
 
         public OnceSupplier(Supplier<T> delegate) {
             this.delegate = lazy(delegate);
@@ -64,6 +66,7 @@ public class SharedResource<K, V> {
                 status.set(OnceSupplier.Status.ACTIVATED);
                 return resource;
             } catch (Throwable t) {
+                brokenException = t;
                 status.set(OnceSupplier.Status.BROKEN);
                 throw t;
             }
@@ -74,13 +77,9 @@ public class SharedResource<K, V> {
             if (status.get() == OnceSupplier.Status.ACTIVATED) {
                 return delegate.get();
             } else if (status.get() == OnceSupplier.Status.BROKEN) {
-                throw new RuntimeException("resource broken");
+                throw new OnceBrokenException(brokenException);
             }
             return doInit();
-        }
-
-        public OnceSupplier.Status getStatus() {
-            return status.get();
         }
     }
 
@@ -102,10 +101,6 @@ public class SharedResource<K, V> {
         @Nonnull
         public V get() {
             return resourceSupplier.get();
-        }
-
-        public OnceSupplier.Status getResourceStatus() {
-            return resourceSupplier.getStatus();
         }
 
         public int count() {
@@ -248,4 +243,10 @@ public class SharedResource<K, V> {
         }
     }
 
+    public static class OnceBrokenException extends RuntimeException {
+
+        private OnceBrokenException(Throwable cause) {
+            super("resource broken", cause);
+        }
+    }
 }

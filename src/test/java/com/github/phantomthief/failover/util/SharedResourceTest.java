@@ -72,6 +72,8 @@ class SharedResourceTest {
         }));
         MockResource mockResource = resources.get("5");
         assertNull(mockResource);
+        assertThrows(IllegalStateException.class,
+                () -> resources.unregister("5", MockResource::close));
     }
 
     private static class MockResource {

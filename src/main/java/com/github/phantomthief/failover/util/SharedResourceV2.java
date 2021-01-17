@@ -52,7 +52,7 @@ public class SharedResourceV2<K, V> {
                 Throwable throwable = null;
                 try {
                     value = delegate.get();
-                    logger.info("create shared resource for key: [{}] => [{}]", key, value);
+                    logger.debug("create shared resource for key: [{}] => [{}]", key, value);
                 } catch (Throwable t) {
                     throwable = t;
                 }
@@ -100,7 +100,7 @@ public class SharedResourceV2<K, V> {
             synchronized (this) {
                 if (!expired) {
                     counter++;
-                    logger.info("incr success: [{}], refCount: [{}], expired: [{}]", key, counter, expired);
+                    logger.debug("incr success: [{}], refCount: [{}], expired: [{}]", key, counter, expired);
                     return true;
                 }
             }
@@ -117,7 +117,7 @@ public class SharedResourceV2<K, V> {
                     if (counter <= 0) {
                         expired = true;
                     }
-                    logger.info("decr success: [{}], refCount: [{}], expired: [{}]", key, counter, expired);
+                    logger.debug("decr success: [{}], refCount: [{}], expired: [{}]", key, counter, expired);
                     return true;
                 }
             }

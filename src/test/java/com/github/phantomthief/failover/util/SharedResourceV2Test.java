@@ -8,9 +8,18 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
+
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.util.SharedResourceV2.UnregisterFailedException;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * @author w.vela
@@ -20,6 +29,47 @@ class SharedResourceV2Test {
 
     private static SharedResourceV2<String, MockResource> resources =
             new SharedResourceV2<>(MockResource::new, MockResource::close);
+
+    @Test
+    void testParallel() throws Throwable {
+        ExecutorService executorService = Executors.newFixedThreadPool(200);
+        AtomicLong failCounter = new AtomicLong(0);
+        try {
+            AtomicBoolean stop = new AtomicBoolean(false);
+            executorService.submit(() -> {
+                while (!stop.get()) {
+                    try {
+                        boolean needUnregister = false;
+                        String name = "" + ThreadLocalRandom.current().nextInt(0, 100);
+                        MockResource mockResource = resources.get(name);
+                        if (mockResource == null) {
+                            needUnregister = true;
+                            mockResource = resources.register(name);
+                        }
+                        if (mockResource.isShutdown()) {
+                            failCounter.incrementAndGet();
+                        }
+                        Uninterruptibles.sleepUninterruptibly(ThreadLocalRandom.current().nextInt(0, 10),
+                                TimeUnit.MICROSECONDS);
+                        if (needUnregister) {
+                            resources.unregister(name);
+                        }
+                    } catch (Throwable t) {
+                        failCounter.incrementAndGet();
+                    }
+                }
+            });
+            Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
+            stop.set(true);
+            Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+            executorService.shutdown();
+            Assertions.assertTrue(executorService.awaitTermination(1, TimeUnit.SECONDS));
+            Assertions.assertEquals(0L, failCounter.get());
+            System.out.println("done");
+        } finally {
+            executorService.shutdown();
+        }
+    }
 
     @Test
     void test() {

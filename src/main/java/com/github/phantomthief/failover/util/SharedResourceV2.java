@@ -24,7 +24,6 @@ import com.github.phantomthief.util.ThrowableConsumer;
  * Created on 2020-10-22
  * @see SharedResource
  * 新版 shared resource 实现，行为具体如下：
- *
  */
 public class SharedResourceV2<K, V> {
 
@@ -47,12 +46,13 @@ public class SharedResourceV2<K, V> {
 
         private final Supplier<TwoTuple<T, Throwable>> delegate;
 
-        public OnceSupplier(Supplier<T> delegate) {
+        public OnceSupplier(Object key, Supplier<T> delegate) {
             this.delegate = lazy(() -> {
                 T value = null;
                 Throwable throwable = null;
                 try {
                     value = delegate.get();
+                    logger.info("create shared resource for key: [{}] => [{}]", key, value);
                 } catch (Throwable t) {
                     throwable = t;
                 }
@@ -84,7 +84,7 @@ public class SharedResourceV2<K, V> {
 
         public ResourceWrapper(K key, @Nonnull Supplier<V> resourceSupplier) {
             this.key = key;
-            this.resourceSupplier = new OnceSupplier<>(resourceSupplier);
+            this.resourceSupplier = new OnceSupplier<>(key, resourceSupplier);
         }
 
         @Nonnull
@@ -100,6 +100,7 @@ public class SharedResourceV2<K, V> {
             synchronized (this) {
                 if (!expired) {
                     counter++;
+                    logger.info("incr success: [{}], refCount: [{}], expired: [{}]", key, counter, expired);
                     return true;
                 }
             }
@@ -116,6 +117,7 @@ public class SharedResourceV2<K, V> {
                     if (counter <= 0) {
                         expired = true;
                     }
+                    logger.info("decr success: [{}], refCount: [{}], expired: [{}]", key, counter, expired);
                     return true;
                 }
             }
@@ -127,7 +129,8 @@ public class SharedResourceV2<K, V> {
     private ResourceWrapper<K, V> ensureWrapperExist(@Nonnull K key) {
         return resourceMap.compute(key, (k, v) -> {
             if (v == null || v.expired) {
-                return new ResourceWrapper<>(k, () -> Objects.requireNonNull(factory.apply(k), "factory 不应返回 null, key: " + key));
+                return new ResourceWrapper<>(k,
+                        () -> Objects.requireNonNull(factory.apply(k), "factory 不应返回 null, key: " + key));
             } else {
                 return v;
             }
@@ -204,7 +207,7 @@ public class SharedResourceV2<K, V> {
         if (resourceWrapper.expired) {
             try {
                 cleanup.accept(resource);
-                logger.info("cleanup resource:{}->{}", key, resource);
+                logger.info("cleanup resource: [{}] => [{}]", key, resource);
             } catch (Throwable e) {
                 throw new UnregisterFailedException(e, resource);
             }

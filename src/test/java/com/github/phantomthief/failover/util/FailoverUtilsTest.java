@@ -26,7 +26,7 @@ class FailoverUtilsTest {
     @Test
     void test() {
         test("localhost", 1, 100);
-        test("111.222.222.111", 2, 100);
+        test("111.222.222.112", 2, 100);
     }
 
     @Test

@@ -8,10 +8,15 @@ public class RatioWeightFunction<T> extends AbstractWeightFunction<T> {
 
     private static final double DEFAULT_FAIL_DECREASE_RATE = 0.5;
     private static final double DEFAULT_SUCCESS_INCREASE_RATE = 0.01;
+    private static final double DEFAULT_RECOVER_RATE = 0.1;
+    private static final double DEFAULT_DOWN_THRESHOLD_RATE = 0.01;
 
     private final double failKeepRateOfCurrentWeight;
     private final double successIncreaseRateOfMaxWeight;
     private final double downThreshold;
+
+    private double downThresholdRateOfMaxWeight = DEFAULT_DOWN_THRESHOLD_RATE;
+    private double recoverRateOfMaxWeight = DEFAULT_RECOVER_RATE;
 
     public RatioWeightFunction() {
         this(DEFAULT_FAIL_DECREASE_RATE, DEFAULT_SUCCESS_INCREASE_RATE);
@@ -47,13 +52,29 @@ public class RatioWeightFunction<T> extends AbstractWeightFunction<T> {
     @Override
     protected double computeSuccess(double maxWeight, double minWeight, int priority, double currentOldWeight,
             T resource) {
-        return currentOldWeight + maxWeight * successIncreaseRateOfMaxWeight;
+        if (currentOldWeight > minWeight) {
+            return currentOldWeight + maxWeight * successIncreaseRateOfMaxWeight;
+        } else {
+            return currentOldWeight + maxWeight * recoverRateOfMaxWeight;
+        }
     }
 
     @Override
     protected double computeFail(double maxWeight, double minWeight, int priority, double currentOldWeight,
             T resource) {
         double x = currentOldWeight * failKeepRateOfCurrentWeight;
-        return x < downThreshold ? minWeight : x;
+        if (downThreshold == 0) {
+            return x < maxWeight * downThresholdRateOfMaxWeight ? minWeight : x;
+        } else {
+            return x < downThreshold ? minWeight : x;
+        }
+    }
+
+    public void setDownThresholdRateOfMaxWeight(double downThresholdRateOfMaxWeight) {
+        this.downThresholdRateOfMaxWeight = downThresholdRateOfMaxWeight;
+    }
+
+    public void setRecoverRateOfMaxWeight(double recoverRateOfMaxWeight) {
+        this.recoverRateOfMaxWeight = recoverRateOfMaxWeight;
     }
 }

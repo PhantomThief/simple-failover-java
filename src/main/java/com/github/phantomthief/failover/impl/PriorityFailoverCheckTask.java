@@ -41,7 +41,7 @@ class PriorityFailoverCheckTask<T> implements Runnable {
     public void ensureStart() {
         if (future == null) {
             synchronized (this) {
-                if (future == null) {
+                if (future == null && config.getChecker() != null) {
                     future =  config.getCheckExecutor().scheduleWithFixedDelay(
                             this, config.getCheckDuration().toMillis(),
                             config.getCheckDuration().toMillis(), TimeUnit.MILLISECONDS);
@@ -61,21 +61,20 @@ class PriorityFailoverCheckTask<T> implements Runnable {
         }
         try {
             for (ResInfo<T> r : resourcesMap.values()) {
-                if (closed) {
-                    return;
-                }
-                if (config.getWeightFunction().needCheck(r.maxWeight,
-                        r.minWeight, r.priority, r.currentWeight, r.resource)) {
-                    boolean ok;
-                    try {
-                        ok = config.getChecker().test(r.resource);
-                    } catch (Throwable e) {
-                        ok = false;
-                    }
+                try {
                     if (closed) {
                         return;
                     }
-                    PriorityFailover.updateWeight(ok, r, config, groups);
+                    if (config.getWeightFunction().needCheck(r.maxWeight,
+                            r.minWeight, r.priority, r.currentWeight, r.resource)) {
+                        boolean ok = config.getChecker().test(r.resource);
+                        if (closed) {
+                            return;
+                        }
+                        PriorityFailover.updateWeight(ok, r, config, groups);
+                    }
+                } catch (Throwable ignore) {
+                    // the test may fail, the user's onSuccess/onFail callback may fail
                 }
             }
         } finally {

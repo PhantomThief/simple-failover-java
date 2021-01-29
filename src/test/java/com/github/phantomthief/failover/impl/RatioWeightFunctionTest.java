@@ -29,9 +29,17 @@ public class RatioWeightFunctionTest {
     }
 
     @Test
+    public void testFail3() {
+        RatioWeightFunction<String> f = new RatioWeightFunction<>();
+        f.setDownThresholdRateOfMaxWeight(0.4);
+        assertEquals(0.5, f.fail(1, 0, 0, 1, "R1"));
+        assertEquals(0, f.fail(1, 0, 0, 0.5, "R1"));
+    }
+
+    @Test
     public void testSuccess1() {
         RatioWeightFunction<String> f = new RatioWeightFunction<>(0.5, 0.5);
-        assertEquals(0.5, f.success(1, 0, 0, 0, "R1"));
+        assertEquals(0.1, f.success(1, 0, 0, 0, "R1"));
         assertEquals(1, f.success(1, 0, 0, 0.5, "R1"));
         assertEquals(1, f.success(1, 0, 0, 1, "R1"));
     }
@@ -43,16 +51,12 @@ public class RatioWeightFunctionTest {
         assertEquals(0, f.success(1, 0, 0, 0, "R1"));
 
         assertEquals(0, f.success(1, 0, 0, 0, "R2"));
-        assertEquals(0.5, f.success(1, 0, 0, 0, "R2"));
-        assertEquals(1, f.success(1, 0, 0, 0.5, "R2"));
-        assertEquals(1, f.success(1, 0, 0, 1, "R2"));
+        assertEquals(0.1, f.success(1, 0, 0, 0, "R2"));
 
+        f.setRecoverRateOfMaxWeight(0.2);
         assertEquals(0, f.fail(1, 0, 0, 0, "R1"));
         assertEquals(0, f.success(1, 0, 0, 0, "R1"));
-        assertEquals(0.5, f.success(1, 0, 0, 0, "R1"));
-        assertEquals(1, f.success(1, 0, 0, 0.5, "R1"));
-        assertEquals(0.5, f.fail(1, 0, 0, 1, "R1"));
-        assertEquals(1, f.success(1, 0, 0, 0.5, "R1"));
-        assertEquals(1, f.success(1, 0, 0, 1, "R1"));
+        assertEquals(0.2, f.success(1, 0, 0, 0, "R1"));
+        assertEquals(0.7, f.success(1, 0, 0, 0.2, "R1"));
     }
 }

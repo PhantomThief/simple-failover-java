@@ -9,7 +9,7 @@
 
     <root>
         <appender-ref ref="stdout"/>
-        <level value="all"/>
+        <level value="ERROR"/>
     </root>
 
     <logger name="ch.qos.logback" level="WARN"/>

@@ -70,6 +70,6 @@ public abstract class AbstractWeightFunction<T> implements WeightFunction<T> {
 
     @Override
     public boolean needCheck(double maxWeight, double minWeight, int priority, double currentWeight, T resource) {
-        return currentWeight <= minWeight;
+        return currentWeight <= minWeight && currentWeight < maxWeight;
     }
 }

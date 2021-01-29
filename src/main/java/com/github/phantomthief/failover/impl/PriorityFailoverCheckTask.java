@@ -4,6 +4,9 @@ import java.util.HashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.phantomthief.failover.impl.PriorityFailover.GroupInfo;
 import com.github.phantomthief.failover.impl.PriorityFailover.ResInfo;
 import com.github.phantomthief.failover.impl.PriorityFailoverBuilder.PriorityFailoverConfig;
@@ -13,6 +16,8 @@ import com.github.phantomthief.failover.impl.PriorityFailoverBuilder.PriorityFai
  * Created on 2020-01-20
  */
 class PriorityFailoverCheckTask<T> implements Runnable {
+
+    private static final Logger logger = LoggerFactory.getLogger(PriorityFailoverCheckTask.class);
 
     private final PriorityFailoverConfig<T> config;
 
@@ -41,7 +46,7 @@ class PriorityFailoverCheckTask<T> implements Runnable {
     public void ensureStart() {
         if (future == null) {
             synchronized (this) {
-                if (future == null) {
+                if (future == null && config.getChecker() != null) {
                     future =  config.getCheckExecutor().scheduleWithFixedDelay(
                             this, config.getCheckDuration().toMillis(),
                             config.getCheckDuration().toMillis(), TimeUnit.MILLISECONDS);
@@ -61,21 +66,25 @@ class PriorityFailoverCheckTask<T> implements Runnable {
         }
         try {
             for (ResInfo<T> r : resourcesMap.values()) {
-                if (closed) {
-                    return;
-                }
-                if (config.getWeightFunction().needCheck(r.maxWeight,
-                        r.minWeight, r.priority, r.currentWeight, r.resource)) {
-                    boolean ok;
-                    try {
-                        ok = config.getChecker().test(r.resource);
-                    } catch (Throwable e) {
-                        ok = false;
-                    }
+                try {
                     if (closed) {
                         return;
                     }
-                    PriorityFailover.updateWeight(ok, r, config, groups);
+                    if (config.getWeightFunction().needCheck(r.maxWeight,
+                            r.minWeight, r.priority, r.currentWeight, r.resource)) {
+                        boolean ok = config.getChecker().test(r.resource);
+                        if (closed) {
+                            return;
+                        }
+                        PriorityFailover.updateWeight(ok, r, config, groups);
+                    }
+                } catch (Throwable e) {
+                    // the test may fail, the user's onSuccess/onFail callback may fail
+                    if (config.getName() == null) {
+                        logger.error("failover check/updateWeight fail: {}", e.toString());
+                    } else {
+                        logger.error("failover({}) check/updateWeight fail: {}", config.getName(), e.toString());
+                    }
                 }
             }
         } finally {

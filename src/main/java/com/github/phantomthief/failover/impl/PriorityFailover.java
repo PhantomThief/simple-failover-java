@@ -119,9 +119,13 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         GroupWeightInfo(boolean maxWeightSame, double totalCurrentWeight,
                 double totalMaxWeight, double[] currentWeightCopy, @Nullable AliasMethod<?> aliasMethod) {
             this.totalCurrentWeight = totalCurrentWeight;
-            this.healthyRate = totalCurrentWeight / totalMaxWeight;
+            if (totalMaxWeight == 0) {
+                this.healthyRate = 0;
+            } else {
+                this.healthyRate = totalCurrentWeight / totalMaxWeight;
+            }
             this.currentWeightCopy = currentWeightCopy;
-            this.roundRobin = maxWeightSame && totalCurrentWeight == totalMaxWeight;
+            this.roundRobin = maxWeightSame && totalCurrentWeight == totalMaxWeight && totalMaxWeight > 0;
             this.aliasMethod = aliasMethod != null && totalCurrentWeight == totalMaxWeight;
         }
     }

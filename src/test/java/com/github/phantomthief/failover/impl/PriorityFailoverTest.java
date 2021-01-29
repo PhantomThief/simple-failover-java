@@ -99,6 +99,38 @@ class PriorityFailoverTest {
     }
 
     @Test
+    public void testZeroMaxWeight() {
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder()
+                .addResource(o0, 0, 0, 0)
+                .addResource(o1, 0, 0, 0)
+                .build();
+        assertNull(failover.getOneAvailable());
+    }
+
+    @Test
+    public void testZeroMaxWeight2() {
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder()
+                .addResource(o0, 0, 0, 0)
+                .addResource(o1, 100, 0, 0)
+                .build();
+        for (int i = 0; i < 100; i++) {
+            assertSame(o1, failover.getOneAvailable());
+        }
+    }
+
+    @Test
+    public void testZeroMaxWeight3() {
+        PriorityFailover<Object> failover = PriorityFailover.newBuilder()
+                .addResource(o0, 0, 0, 0)
+                .addResource(o1, 0, 0, 0)
+                .addResource(o2, 100, 1, 0)
+                .build();
+        for (int i = 0; i < 100; i++) {
+            assertSame(o2, failover.getOneAvailable());
+        }
+    }
+
+    @Test
     public void testGetResourceStatus(){
         PriorityFailover<Object> failover = PriorityFailover.newBuilder()
                 .addResource(o0, 100, 0, 0, 100)

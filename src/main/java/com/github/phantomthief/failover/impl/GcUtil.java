@@ -5,6 +5,8 @@ import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.google.common.annotations.VisibleForTesting;
+
 
 /**
  * @author huangli
@@ -14,6 +16,11 @@ final class GcUtil {
 
     private static ConcurrentHashMap<Reference<Object>, Runnable> refMap = new ConcurrentHashMap<>();
     private static final ReferenceQueue<Object> REF_QUEUE = new ReferenceQueue<>();
+
+    @VisibleForTesting
+    static ConcurrentHashMap<Reference<Object>, Runnable> getRefMap() {
+        return refMap;
+    }
 
     public static void register(Object resource, Runnable cleaner) {
         if (resource != null && cleaner != null) {

@@ -14,7 +14,7 @@ import com.google.common.annotations.VisibleForTesting;
  */
 final class GcUtil {
 
-    private static ConcurrentHashMap<Reference<Object>, Runnable> refMap = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Reference<Object>, Runnable> refMap = new ConcurrentHashMap<>();
     private static final ReferenceQueue<Object> REF_QUEUE = new ReferenceQueue<>();
 
     @VisibleForTesting
@@ -33,7 +33,11 @@ final class GcUtil {
         Reference<?> ref = REF_QUEUE.poll();
         while (ref != null) {
             Runnable cleaner = refMap.remove(ref);
-            cleaner.run();
+            try {
+                cleaner.run();
+            } catch (Throwable t) {
+                // ignore
+            }
             ref = REF_QUEUE.poll();
         }
     }

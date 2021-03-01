@@ -31,7 +31,7 @@ class WeightFailoverCheckTask<T> {
     private static final Logger logger = LoggerFactory.getLogger(WeightFailoverCheckTask.class);
 
     static final int CLEAN_INIT_DELAY_SECONDS = 5;
-    static final int CLEAN_DELAY_SECONDS = 10;
+    private static final int CLEAN_DELAY_SECONDS = 10;
 
     static {
         SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(WeightFailoverCheckTask::doClean,

@@ -31,9 +31,8 @@ class WeightFailoverCheckTaskTest {
         for (int i = 0; i < 5000; i++) {
             byte[] bs = new byte[1 * 1024 * 1024];
         }
-        System.gc();
 
-        Thread.sleep((1 + WeightFailoverCheckTask.CLEAN_DELAY_SECONDS) * 1000);
+        Thread.sleep(WeightFailoverCheckTask.CLEAN_INIT_DELAY_SECONDS * 1000);
 
         Assertions.assertTrue(closed.get());
         Assertions.assertTrue(recoveryFuture.get().isCancelled());

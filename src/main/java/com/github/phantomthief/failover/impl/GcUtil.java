@@ -5,6 +5,11 @@ import java.lang.ref.Reference;
 import java.lang.ref.ReferenceQueue;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.annotations.VisibleForTesting;
+
 
 /**
  * @author huangli
@@ -12,8 +17,15 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 final class GcUtil {
 
-    private static ConcurrentHashMap<Reference<Object>, Runnable> refMap = new ConcurrentHashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(GcUtil.class);
+
+    private static final ConcurrentHashMap<Reference<Object>, Runnable> refMap = new ConcurrentHashMap<>();
     private static final ReferenceQueue<Object> REF_QUEUE = new ReferenceQueue<>();
+
+    @VisibleForTesting
+    static ConcurrentHashMap<Reference<Object>, Runnable> getRefMap() {
+        return refMap;
+    }
 
     public static void register(Object resource, Runnable cleaner) {
         if (resource != null && cleaner != null) {
@@ -26,7 +38,11 @@ final class GcUtil {
         Reference<?> ref = REF_QUEUE.poll();
         while (ref != null) {
             Runnable cleaner = refMap.remove(ref);
-            cleaner.run();
+            try {
+                cleaner.run();
+            } catch (Throwable t) {
+                logger.warn("Failover GC doClean failed", t);
+            }
             ref = REF_QUEUE.poll();
         }
     }

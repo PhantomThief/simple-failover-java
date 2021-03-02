@@ -5,18 +5,24 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.impl.PriorityFailover.ResStatus;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * @author huangli
@@ -514,4 +520,49 @@ class PriorityFailoverTest {
         assertTrue(task.isClosed());
     }
 
+    private static class MockResource {
+        private final String resource;
+        private volatile PriorityFailover<MockResource> failover;
+
+        private MockResource(String resource) {
+            this.resource = resource;
+        }
+
+        void setFailover(
+                PriorityFailover<MockResource> failover) {
+            this.failover = failover;
+        }
+    }
+
+    /**
+     * 通常都会在 resource 中持有 failover 引用，测试下这种场景下也能够被正常 gc
+     */
+    @SuppressWarnings("UnusedAssignment")
+    @Test
+    void testGc2() {
+        int beforeSize = GcUtil.getRefMap().size();
+        List<MockResource> resources = Stream.of("a", "b").map(MockResource::new).collect(Collectors.toList());
+
+        PriorityFailover<MockResource> failover = PriorityFailover.<MockResource> newBuilder()
+                .addResources(resources)
+                .checkDuration(Duration.ofMillis(1))
+                .checker(o -> true)
+                .build();
+        for (MockResource r : resources) {
+            r.setFailover(failover);
+        }
+        failover = null;
+        resources = null;
+
+        int counter = 0;
+        while (GcUtil.getRefMap().size() > beforeSize && counter < 20) {
+            counter++;
+            Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+            System.gc();
+            GcUtil.doClean();
+        }
+
+        int afterSize = GcUtil.getRefMap().size();
+        Assertions.assertEquals(beforeSize, afterSize);
+    }
 }

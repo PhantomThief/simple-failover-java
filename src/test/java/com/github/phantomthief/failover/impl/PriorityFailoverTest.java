@@ -546,16 +546,18 @@ class PriorityFailoverTest {
         PriorityFailover<MockResource> failover = PriorityFailover.<MockResource> newBuilder()
                 .addResources(resources)
                 .checkDuration(Duration.ofMillis(1))
+                .startCheckTaskImmediately(true)
                 .checker(o -> true)
                 .build();
         for (MockResource r : resources) {
             r.setFailover(failover);
         }
+        failover.close();
         failover = null;
         resources = null;
 
         int counter = 0;
-        while (GcUtil.getRefMap().size() > beforeSize && counter < 20) {
+        while (GcUtil.getRefMap().size() > beforeSize && counter < 10) {
             counter++;
             Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
             System.gc();

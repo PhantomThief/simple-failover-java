@@ -33,8 +33,8 @@ class PriorityFailoverCheckTask<T> implements Runnable {
     /**
      * 有时在 ResInfo 持有的资源对象中，会持有 failover 实例，以便调用 failover 的 success/fail 等方法
      * 一旦在注册到 GcUtil 的 CloseRunnable 中持有了 PriorityFailoverCheckTask 的引用，将导致 failover
-     * 始终存在引用，无法被关闭和清理。所以这里单独构造一个 static class，避免隐式持有 this.resourcesMap
-     * 导致 failover 无法被 gc 掉
+     * 始终存在引用，无法被关闭和清理。所以这里单独构造一个 static class，避免隐式持有 this.resourcesMap。
+     * 导致即使主动关闭了 failover，failover 也无法被 gc 掉
      */
     private static class CloseRunnable implements Runnable {
         private final AtomicBoolean closed;

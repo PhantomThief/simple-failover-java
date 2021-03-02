@@ -15,12 +15,14 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
+import com.github.phantomthief.failover.SimpleFailover;
 import com.github.phantomthief.failover.impl.PriorityFailover.ResStatus;
 import com.google.common.util.concurrent.Uninterruptibles;
 
@@ -510,9 +512,11 @@ class PriorityFailoverTest {
                 .checker(o -> false)
                 .build();
         PriorityFailoverCheckTask<Object> task = failover.getCheckTask();
+        //noinspection UnusedAssignment
         failover = null;
 
         for (int i = 0; i < 5000; i++) {
+            //noinspection PointlessArithmeticExpression
             byte[] bs = new byte[1 * 1024 * 1024];
         }
 
@@ -521,15 +525,19 @@ class PriorityFailoverTest {
     }
 
     private static class MockResource {
+
+        private static final AtomicInteger INSTANCE_COUNTER = new AtomicInteger(0);
+
         private final String resource;
-        private volatile PriorityFailover<MockResource> failover;
+        private volatile SimpleFailover<MockResource> failover;
 
         private MockResource(String resource) {
             this.resource = resource;
+            INSTANCE_COUNTER.incrementAndGet();
+            GcUtil.register(this, INSTANCE_COUNTER::decrementAndGet);
         }
 
-        void setFailover(
-                PriorityFailover<MockResource> failover) {
+        void setFailover(SimpleFailover<MockResource> failover) {
             this.failover = failover;
         }
     }
@@ -552,6 +560,7 @@ class PriorityFailoverTest {
         for (MockResource r : resources) {
             r.setFailover(failover);
         }
+        Assertions.assertEquals(2, MockResource.INSTANCE_COUNTER.get());
         failover.close();
         failover = null;
         resources = null;
@@ -565,6 +574,7 @@ class PriorityFailoverTest {
         }
 
         int afterSize = GcUtil.getRefMap().size();
-        Assertions.assertEquals(beforeSize, afterSize);
+        Assertions.assertTrue(beforeSize >= afterSize);
+        Assertions.assertEquals(0, MockResource.INSTANCE_COUNTER.get());
     }
 }

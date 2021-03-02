@@ -1,6 +1,7 @@
 package com.github.phantomthief.failover.impl;
 
 import static com.github.phantomthief.tuple.Tuple.tuple;
+import static com.github.phantomthief.util.MoreFunctions.runCatching;
 import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.collect.Multimaps.toMultimap;
 import static java.util.stream.Collectors.toList;
@@ -139,6 +140,11 @@ public class ComboFailover<T> implements Failover<T>, Iterable<Failover<T>> {
     @Override
     public Iterator<Failover<T>> iterator() {
         return failoverList.iterator();
+    }
+
+    @Override
+    public void close() {
+        failoverList.forEach(failover -> runCatching(failover::close));
     }
 
     @NotThreadSafe

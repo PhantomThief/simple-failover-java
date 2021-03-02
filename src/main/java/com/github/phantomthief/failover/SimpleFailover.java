@@ -15,7 +15,7 @@ import javax.annotation.Nullable;
  * @author huangli
  * Created on 2020-01-15
  */
-public interface SimpleFailover<T> {
+public interface SimpleFailover<T> extends AutoCloseable {
 
     /**
      * 资源调用成功后，由使用方调用本方法，通知failover组件资源调用成功，随后failover内部通常会增加这个资源的权重（不超过最大值）。
@@ -58,4 +58,12 @@ public interface SimpleFailover<T> {
      */
     @Nullable
     T getOneAvailableExclude(Collection<T> exclusions);
+
+    /**
+     * 为了编译通过，提供默认实现
+     * 实现内部应关闭健康检查任务。
+     */
+    @Override
+    default void close() {
+    }
 }

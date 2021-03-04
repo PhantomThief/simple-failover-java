@@ -21,17 +21,24 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.apache.commons.math3.stat.inference.BinomialTest;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import com.github.phantomthief.failover.Failover;
+import com.github.phantomthief.failover.SimpleFailover;
 import com.google.common.collect.HashMultiset;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.TreeMultiset;
+import com.google.common.util.concurrent.Uninterruptibles;
 
 /**
  * @author w.vela
@@ -190,7 +197,7 @@ class WeightFailoverTest {
 
     @Test
     void testWeight() {
-        boolean[] block3 = { false };
+        boolean[] block3 = {false};
         Predicate<String> filter = it -> {
             if (block3[0]) {
                 return !it.equals("s3");
@@ -228,7 +235,6 @@ class WeightFailoverTest {
         assertTrue(checkRatio(result.count("s3"), result.count("s1"), 3));
     }
 
-
     private boolean check(String test) {
         System.out.println("test:" + test);
         return true;
@@ -242,5 +248,58 @@ class WeightFailoverTest {
             failover.fail(obj);
         }
         return result;
+    }
+
+    private static class MockResource {
+
+        private static final AtomicInteger INSTANCE_COUNTER = new AtomicInteger(0);
+
+        private final String resource;
+        private volatile SimpleFailover<MockResource> failover;
+
+        private MockResource(String resource) {
+            this.resource = resource;
+            INSTANCE_COUNTER.incrementAndGet();
+            GcUtil.register(this, INSTANCE_COUNTER::decrementAndGet);
+        }
+
+        void setFailover(SimpleFailover<MockResource> failover) {
+            this.failover = failover;
+        }
+    }
+
+    /**
+     * 通常都会在 resource 中持有 failover 引用，测试下这种场景下也能够被正常 gc
+     */
+    @SuppressWarnings("UnusedAssignment")
+    @Test
+    void testGc2() {
+        int beforeSize = GcUtil.getRefMap().size();
+        List<MockResource> resources = Stream.of("a", "b").map(MockResource::new).collect(Collectors.toList());
+
+        WeightFailover<MockResource> failover = WeightFailover.newBuilder()
+                .checkDuration(1, MILLISECONDS)
+                .checker(o -> 1.0)
+                .build(resources);
+        for (MockResource r : resources) {
+            r.setFailover(failover);
+            failover.down(r);
+        }
+        Assertions.assertEquals(2, MockResource.INSTANCE_COUNTER.get());
+        failover.close();
+        failover = null;
+        resources = null;
+
+        int counter = 0;
+        while (GcUtil.getRefMap().size() > beforeSize && counter < 10) {
+            counter++;
+            Uninterruptibles.sleepUninterruptibly(1, TimeUnit.SECONDS);
+            System.gc();
+            GcUtil.doClean();
+        }
+
+        int afterSize = GcUtil.getRefMap().size();
+        Assertions.assertTrue(beforeSize >= afterSize);
+        Assertions.assertEquals(0, MockResource.INSTANCE_COUNTER.get());
     }
 }

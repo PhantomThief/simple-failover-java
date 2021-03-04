@@ -3,6 +3,8 @@ package com.github.phantomthief.failover.impl;
 import java.util.HashMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -21,12 +23,40 @@ class PriorityFailoverCheckTask<T> implements Runnable {
 
     private final PriorityFailoverConfig<T> config;
 
-    private volatile ScheduledFuture<?> future;
+    private final AtomicReference<ScheduledFuture<?>> futureRef = new AtomicReference<>();
 
     private final HashMap<T, ResInfo<T>> resourcesMap;
     private final GroupInfo<T>[] groups;
 
-    private volatile boolean closed;
+    private final AtomicBoolean closed = new AtomicBoolean(false);
+
+    /**
+     * 有时在 ResInfo 持有的资源对象中，会持有 failover 实例，以便调用 failover 的 success/fail 等方法
+     * 一旦在注册到 GcUtil 的 CloseRunnable 中持有了 PriorityFailoverCheckTask 的引用，将导致 failover
+     * 始终存在引用，无法被关闭和清理。所以这里单独构造一个 static class，避免隐式持有 this.resourcesMap。
+     * 导致即使主动关闭了 failover，failover 也无法被 gc 掉
+     */
+    private static class CloseRunnable implements Runnable {
+        private final AtomicBoolean closed;
+        private final AtomicReference<ScheduledFuture<?>> futureRef;
+
+        CloseRunnable(AtomicBoolean closed,
+                AtomicReference<ScheduledFuture<?>> futureRef) {
+            this.closed = closed;
+            this.futureRef = futureRef;
+        }
+
+        @Override
+        public void run() {
+            // 这里代码和 close 一样，由于此时 failover 已经被 gc 掉了，所以不需要再加锁了
+            closed.set(true);
+            ScheduledFuture<?> scheduledFuture = futureRef.get();
+            if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
+                scheduledFuture.cancel(true);
+                futureRef.set(null);
+            }
+        }
+    }
 
     PriorityFailoverCheckTask(PriorityFailoverConfig<T> config, PriorityFailover<T> failover) {
         this.config = config;
@@ -36,20 +66,18 @@ class PriorityFailoverCheckTask<T> implements Runnable {
             if (config.isStartCheckTaskImmediately()) {
                 ensureStart();
             }
-            GcUtil.register(failover, this::close);
+            GcUtil.register(failover, new CloseRunnable(closed, futureRef));
             GcUtil.doClean();
-        } else {
-            future = null;
         }
     }
 
     public void ensureStart() {
-        if (future == null) {
+        if (futureRef.get() == null) {
             synchronized (this) {
-                if (future == null && config.getChecker() != null) {
-                    future =  config.getCheckExecutor().scheduleWithFixedDelay(
+                if (futureRef.get() == null && config.getChecker() != null) {
+                    futureRef.set(config.getCheckExecutor().scheduleWithFixedDelay(
                             this, config.getCheckDuration().toMillis(),
-                            config.getCheckDuration().toMillis(), TimeUnit.MILLISECONDS);
+                            config.getCheckDuration().toMillis(), TimeUnit.MILLISECONDS));
                 }
             }
         }
@@ -67,13 +95,13 @@ class PriorityFailoverCheckTask<T> implements Runnable {
         try {
             for (ResInfo<T> r : resourcesMap.values()) {
                 try {
-                    if (closed) {
+                    if (closed.get()) {
                         return;
                     }
                     if (config.getWeightFunction().needCheck(r.maxWeight,
                             r.minWeight, r.priority, r.currentWeight, r.resource)) {
                         boolean ok = config.getChecker().test(r.resource);
-                        if (closed) {
+                        if (closed.get()) {
                             return;
                         }
                         PriorityFailover.updateWeight(ok, r, config, groups);
@@ -93,13 +121,15 @@ class PriorityFailoverCheckTask<T> implements Runnable {
     }
 
     public synchronized void close() {
-        closed = true;
-        if (future != null && !future.isCancelled()) {
-            future.cancel(true);
+        closed.set(true);
+        ScheduledFuture<?> scheduledFuture = futureRef.get();
+        if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
+            scheduledFuture.cancel(true);
+            futureRef.set(null);
         }
     }
 
     boolean isClosed() {
-        return closed;
+        return closed.get();
     }
 }

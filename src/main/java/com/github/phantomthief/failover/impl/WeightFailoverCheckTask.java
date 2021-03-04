@@ -13,6 +13,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +39,6 @@ class WeightFailoverCheckTask<T> {
                 CLEAN_INIT_DELAY_SECONDS, CLEAN_DELAY_SECONDS, SECONDS);
     }
 
-    private final String failoverName;
     private final WeightFailoverBuilder<T> builder;
     private final AtomicBoolean closed;
     private final ConcurrentMap<T, Integer> initWeightMap;
@@ -53,47 +53,70 @@ class WeightFailoverCheckTask<T> {
     private static final ReferenceQueue<WeightFailover<?>> REF_QUEUE = new ReferenceQueue<>();
 
     private static class MyPhantomReference<X> extends PhantomReference<WeightFailover<X>> {
-        @SuppressWarnings("checkstyle:VisibilityModifier")
-        private WeightFailoverCheckTask<?> task;
-        public MyPhantomReference(WeightFailover<X> referent, ReferenceQueue<WeightFailover<?>> q, WeightFailoverCheckTask<?> task) {
+        private CloseableSupplier<ScheduledFuture<?>> recoveryFuture;
+        private AtomicBoolean closed;
+        private String failoverName;
+        public MyPhantomReference(WeightFailover<X> referent, ReferenceQueue<WeightFailover<?>> q,
+                CloseableSupplier<ScheduledFuture<?>> recoveryFuture, AtomicBoolean closed, String failoverName) {
             super(referent, q);
-            this.task = task;
+            this.recoveryFuture = recoveryFuture;
+            this.closed = closed;
+            this.failoverName = failoverName;
+        }
+
+        private void close() {
+            if (!closed.get()) {
+                logger.warn("failover not released manually: {}", failoverName);
+                closed.set(true);
+                WeightFailover.tryCloseRecoveryScheduler(recoveryFuture, failoverName);
+            }
+        }
+    }
+
+    // lambda会隐式持有this，所以弄一个静态类
+    static class RecoveryFutureSupplier implements Supplier<ScheduledFuture<?>> {
+        private Runnable runnable;
+        private final long initDelay;
+        private final long delay;
+
+        public RecoveryFutureSupplier(Runnable runnable, long initDelay, long delay) {
+            this.runnable = runnable;
+            this.initDelay = initDelay;
+            this.delay = delay;
+        }
+
+        @Override
+        public ScheduledFuture<?> get() {
+            ScheduledFuture<?> f = SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(
+                    runnable, initDelay, delay, MILLISECONDS);
+            runnable = null;
+            return f;
         }
     }
 
     WeightFailoverCheckTask(WeightFailover<T> failover, WeightFailoverBuilder<T> builder, AtomicBoolean closed,
             ConcurrentMap<T, Integer> initWeightMap, ConcurrentMap<T, Integer> currentWeightMap,
             AtomicInteger allAvailableVersion) {
-        this.failoverName = failover.toString();
         this.builder = builder;
         this.closed = closed;
         this.initWeightMap = initWeightMap;
         this.currentWeightMap = currentWeightMap;
         this.allAvailableVersion = allAvailableVersion;
-        this.recoveryFuture = lazy(() -> SharedCheckExecutorHolder.getInstance().scheduleWithFixedDelay(
-                this::run, builder.checkDuration, builder.checkDuration, MILLISECONDS));
+        this.recoveryFuture = lazy(new RecoveryFutureSupplier(this::run, builder.checkDuration, builder.checkDuration));
 
-        phantomReference = new MyPhantomReference<>(failover, REF_QUEUE, this);
+        phantomReference = new MyPhantomReference<>(failover, REF_QUEUE, recoveryFuture, closed, failover.toString());
     }
 
     private static void doClean() {
         MyPhantomReference<?> ref = (MyPhantomReference<?>) REF_QUEUE.poll();
         while (ref != null) {
-            ref.task.close();
+            ref.close();
             ref = (MyPhantomReference<?>) REF_QUEUE.poll();
         }
     }
 
     public CloseableSupplier<ScheduledFuture<?>> lazyFuture() {
         return recoveryFuture;
-    }
-
-    private void close() {
-        if (!closed.get()) {
-            logger.warn("failover not released manually: {}", failoverName);
-            closed.set(true);
-            WeightFailover.tryCloseRecoveryScheduler(recoveryFuture, failoverName);
-        }
     }
 
     private void run() {

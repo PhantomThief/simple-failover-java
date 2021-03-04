@@ -53,6 +53,7 @@ class PriorityFailoverCheckTask<T> implements Runnable {
             ScheduledFuture<?> scheduledFuture = futureRef.get();
             if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
                 scheduledFuture.cancel(true);
+                futureRef.set(null);
             }
         }
     }
@@ -124,6 +125,7 @@ class PriorityFailoverCheckTask<T> implements Runnable {
         ScheduledFuture<?> scheduledFuture = futureRef.get();
         if (scheduledFuture != null && !scheduledFuture.isCancelled()) {
             scheduledFuture.cancel(true);
+            futureRef.set(null);
         }
     }
 

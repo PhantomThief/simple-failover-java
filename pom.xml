@@ -7,7 +7,7 @@
     <properties>
         <more-lambdas.version>0.1.12</more-lambdas.version>
         <slf4j-api.version>1.7.14</slf4j-api.version>
-        <guava.version>28.1-jre</guava.version>
+        <guava.version>29.0-jre</guava.version>
         <jsr305.version>3.0.2</jsr305.version>
 
         <junit.version>5.7.0</junit.version>

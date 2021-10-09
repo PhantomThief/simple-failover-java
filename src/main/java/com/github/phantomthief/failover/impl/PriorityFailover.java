@@ -366,10 +366,10 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
         if (newWeight == currentWeight) {
             return;
         }
-
-        resInfo.currentWeight = newWeight;
-
-        updateGroupHealthy(priority, groups);
+        synchronized (config) {
+            resInfo.currentWeight = newWeight;
+            updateGroupHealthy(priority, groups);
+        }
 
         WeightListener<T> listener = config.getWeightListener();
         if (listener != null) {
@@ -390,8 +390,8 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
                 double[] weightCopy = new double[resCount];
                 for (int i = 0; i < resCount; i++) {
                     ResInfo<T> ri = resources[i];
-                    sumCurrentWeight += ri.currentWeight;
                     weightCopy[i] = ri.currentWeight;
+                    sumCurrentWeight += weightCopy[i];
                 }
                 psi.groupWeightInfo = new GroupWeightInfo(psi.maxWeightSame, sumCurrentWeight,
                         psi.totalMaxWeight, weightCopy, psi.aliasMethod);
@@ -409,8 +409,10 @@ public class PriorityFailover<T> implements SimpleFailover<T>, AutoCloseable {
             resInfo.concurrency.decr();
         }
         double oldWeight = resInfo.currentWeight;
-        resInfo.currentWeight = resInfo.minWeight;
-        updateGroupHealthy(resInfo.priority, groups);
+        synchronized (this.config) {
+            resInfo.currentWeight = resInfo.minWeight;
+            updateGroupHealthy(resInfo.priority, groups);
+        }
         WeightListener<T> listener = config.getWeightListener();
         if (listener != null) {
             listener.onFail(resInfo.maxWeight, resInfo.minWeight,

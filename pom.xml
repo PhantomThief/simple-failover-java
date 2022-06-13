@@ -13,7 +13,7 @@
         <junit.version>5.8.2</junit.version>
         <logback-classic.version>1.2.3</logback-classic.version>
         <commons-math3.version>3.6.1</commons-math3.version>
-        <jmh.version>1.27</jmh.version>
+        <jmh.version>1.35</jmh.version>
 
         <maven-surefire-plugin.version>3.0.0-M7</maven-surefire-plugin.version>
         <nexus-staging-maven-plugin.version>1.6.13</nexus-staging-maven-plugin.version>

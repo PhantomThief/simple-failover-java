@@ -57,18 +57,18 @@ class WeightFailoverCheckTask<T> {
         private AtomicBoolean closed;
         private String failoverName;
         public MyPhantomReference(WeightFailover<X> referent, ReferenceQueue<WeightFailover<?>> q,
-                CloseableSupplier<ScheduledFuture<?>> recoveryFuture, AtomicBoolean closed, String failoverName) {
+                CloseableSupplier<ScheduledFuture<?>> recoveryFuture, AtomicBoolean closed) {
             super(referent, q);
             this.recoveryFuture = recoveryFuture;
             this.closed = closed;
-            this.failoverName = failoverName;
+            this.failoverName = referent.toString();
         }
 
         private void close() {
             if (!closed.get()) {
                 logger.warn("failover not released manually: {}", failoverName);
                 closed.set(true);
-                WeightFailover.tryCloseRecoveryScheduler(recoveryFuture, failoverName);
+                WeightFailover.tryCloseRecoveryScheduler(recoveryFuture, () -> failoverName);
             }
         }
     }
@@ -104,7 +104,7 @@ class WeightFailoverCheckTask<T> {
         this.allAvailableVersion = allAvailableVersion;
         this.recoveryFuture = lazy(new RecoveryFutureSupplier(this::run, builder.checkDuration, builder.checkDuration));
 
-        phantomReference = new MyPhantomReference<>(failover, REF_QUEUE, recoveryFuture, closed, failover.toString());
+        phantomReference = new MyPhantomReference<>(failover, REF_QUEUE, recoveryFuture, closed);
     }
 
     private static void doClean() {

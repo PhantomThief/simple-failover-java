@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.IntUnaryOperator;
 import java.util.function.Predicate;
+import java.util.function.Supplier;
 
 import javax.annotation.Nullable;
 
@@ -127,15 +128,16 @@ public class WeightFailover<T> implements Failover<T>, Closeable {
     @Override
     public void close() {
         closed.set(true);
-        tryCloseRecoveryScheduler(recoveryFuture, this.toString());
+        tryCloseRecoveryScheduler(recoveryFuture, this::toString);
     }
 
-    static void tryCloseRecoveryScheduler(CloseableSupplier<ScheduledFuture<?>> recoveryFuture, String name) {
+    static void tryCloseRecoveryScheduler(CloseableSupplier<ScheduledFuture<?>> recoveryFuture,
+            Supplier<String> nameSupplier) {
         synchronized (recoveryFuture) {
             recoveryFuture.ifPresent(future -> {
                 if (!future.isCancelled()) {
                     if (!future.cancel(true)) {
-                        logger.warn("fail to close failover:{}", name);
+                        logger.warn("fail to close failover:{}", nameSupplier.get());
                     }
                 }
             });

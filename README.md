@@ -17,9 +17,9 @@ A simple failover library for Java.
 ```Java	
 // 添加多个被调用资源，这里的被调用资源是指目标服务器（有多个服务器提供相同的服务），下面例子展示了3个，每个权重100
 String server1 = "192.168.1.1";
-String server1 = "192.168.1.2";
-String server1 = "192.168.1.3";
-SimpleFailover<String> failover = PriorityFailover.newBuilder()
+String server2 = "192.168.1.2";
+String server3 = "192.168.1.3";
+SimpleFailover<String> failover = PriorityFailover.<String>newBuilder()
         .addResource(server1, 100.0) 
         .addResource(server2, 100.0)
         .addResource(server3, 100.0)
